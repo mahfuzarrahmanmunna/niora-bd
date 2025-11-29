@@ -1,0 +1,1397 @@
+[
+    {
+        "id": "COS001",
+        "name": "Radiant Glow Foundation",
+        "brand": "BeautyLux",
+        "category": "Foundation",
+        "price": 32.99,
+        "discount": 15,
+        "finalPrice": 28.04,
+        "shade": "Natural Beige",
+        "volume": "30ml",
+        "description": "Lightweight foundation with SPF 15 for a natural, radiant finish",
+        "rating": 4.5,
+        "stock": 145,
+        "imageUrl": "https://example.com/images/foundation1.jpg",
+        "expirationDate": "2025-08-15",
+        "skinType": "All skin types",
+        "features": [
+            "Oil-free",
+            "Non-comedogenic",
+            "SPF 15"
+        ],
+        "ingredients": [
+            "Water",
+            "Dimethicone",
+            "Glycerin",
+            "Titanium Dioxide"
+        ]
+    },
+    {
+        "id": "COS002",
+        "name": "Velvet Matte Lipstick",
+        "brand": "GlamourLips",
+        "category": "Lipstick",
+        "price": 18.50,
+        "discount": 20,
+        "finalPrice": 14.80,
+        "shade": "Ruby Red",
+        "volume": "4g",
+        "description": "Long-lasting matte lipstick with intense color payoff",
+        "rating": 4.7,
+        "stock": 89,
+        "imageUrl": "https://example.com/images/lipstick1.jpg",
+        "expirationDate": "2024-12-30",
+        "skinType": "All skin types",
+        "features": [
+            "Long-wear",
+            "Vegan",
+            "Cruelty-free"
+        ],
+        "ingredients": [
+            "Candelilla Wax",
+            "Jojoba Oil",
+            "Iron Oxides",
+            "Vitamin E"
+        ]
+    },
+    {
+        "id": "COS003",
+        "name": "Revitalizing Eye Cream",
+        "brand": "SkinEssence",
+        "category": "Eye Care",
+        "price": 45.00,
+        "discount": 10,
+        "finalPrice": 40.50,
+        "shade": "N/A",
+        "volume": "15ml",
+        "description": "Anti-aging eye cream that reduces dark circles and puffiness",
+        "rating": 4.3,
+        "stock": 67,
+        "imageUrl": "https://example.com/images/eyecream1.jpg",
+        "expirationDate": "2025-06-20",
+        "skinType": "All skin types",
+        "features": [
+            "Dermatologist tested",
+            "Hypoallergenic",
+            "Fragrance-free"
+        ],
+        "ingredients": [
+            "Water",
+            "Peptides",
+            "Hyaluronic Acid",
+            "Vitamin C"
+        ]
+    },
+    {
+        "id": "COS004",
+        "name": "Lush Lash Mascara",
+        "brand": "EyeDefine",
+        "category": "Mascara",
+        "price": 22.00,
+        "discount": 0,
+        "finalPrice": 22.00,
+        "shade": "Black",
+        "volume": "10ml",
+        "description": "Volumizing mascara for dramatic, full lashes",
+        "rating": 4.6,
+        "stock": 203,
+        "imageUrl": "https://example.com/images/mascara1.jpg",
+        "expirationDate": "2024-10-15",
+        "skinType": "All skin types",
+        "features": [
+            "Water-resistant",
+            "Smudge-proof",
+            "Ophthalmologist tested"
+        ],
+        "ingredients": [
+            "Water",
+            "Beeswax",
+            "Iron Oxides",
+            "Panthenol"
+        ]
+    },
+    {
+        "id": "COS005",
+        "name": "Hydrating Face Serum",
+        "brand": "AquaGlow",
+        "category": "Serum",
+        "price": 38.99,
+        "discount": 25,
+        "finalPrice": 29.24,
+        "shade": "N/A",
+        "volume": "30ml",
+        "description": "Intensive hydration serum with hyaluronic acid",
+        "rating": 4.8,
+        "stock": 112,
+        "imageUrl": "https://example.com/images/serum1.jpg",
+        "expirationDate": "2025-11-30",
+        "skinType": "Dry to normal skin",
+        "features": [
+            "Paraben-free",
+            "Sulfate-free",
+            "Organic ingredients"
+        ],
+        "ingredients": [
+            "Water",
+            "Hyaluronic Acid",
+            "Vitamin B5",
+            "Botanical Extracts"
+        ]
+    },
+    {
+        "id": "COS006",
+        "name": "Bronze Goddess Blush",
+        "brand": "FaceGlow",
+        "category": "Blush",
+        "price": 26.50,
+        "discount": 15,
+        "finalPrice": 22.53,
+        "shade": "Coral Sunset",
+        "volume": "8g",
+        "description": "Silky powder blush for a natural, healthy glow",
+        "rating": 4.4,
+        "stock": 78,
+        "imageUrl": "https://example.com/images/blush1.jpg",
+        "expirationDate": "2025-04-10",
+        "skinType": "All skin types",
+        "features": [
+            "Buildable coverage",
+            "Long-lasting",
+            "Mineral-based"
+        ],
+        "ingredients": [
+            "Mica",
+            "Talc",
+            "Iron Oxides",
+            "Silica"
+        ]
+    },
+    {
+        "id": "COS007",
+        "name": "Purifying Clay Mask",
+        "brand": "ClearSkin",
+        "category": "Face Mask",
+        "price": 19.99,
+        "discount": 30,
+        "finalPrice": 13.99,
+        "shade": "N/A",
+        "volume": "75ml",
+        "description": "Deep cleansing clay mask for clear, refreshed skin",
+        "rating": 4.2,
+        "stock": 156,
+        "imageUrl": "https://example.com/images/mask1.jpg",
+        "expirationDate": "2024-09-25",
+        "skinType": "Oily to combination skin",
+        "features": [
+            "Detoxifying",
+            "Pore-minimizing",
+            "Dermatologist tested"
+        ],
+        "ingredients": [
+            "Water",
+            "Kaolin Clay",
+            "Bentonite",
+            "Tea Tree Oil"
+        ]
+    },
+    {
+        "id": "COS008",
+        "name": "Precision Eyeliner Pen",
+        "brand": "EyeDefine",
+        "category": "Eyeliner",
+        "price": 16.99,
+        "discount": 0,
+        "finalPrice": 16.99,
+        "shade": "Deep Black",
+        "volume": "1.5ml",
+        "description": "Fine-tip liquid eyeliner for precise application",
+        "rating": 4.5,
+        "stock": 134,
+        "imageUrl": "https://example.com/images/eyeliner1.jpg",
+        "expirationDate": "2024-08-20",
+        "skinType": "All skin types",
+        "features": [
+            "Waterproof",
+            "Smudge-proof",
+            "Quick-dry"
+        ],
+        "ingredients": [
+            "Water",
+            "Carbon Black",
+            "Acrylates Copolymer",
+            "Preservatives"
+        ]
+    },
+    {
+        "id": "COS009",
+        "name": "Nourishing Body Butter",
+        "brand": "SilkSkin",
+        "category": "Body Care",
+        "price": 24.00,
+        "discount": 20,
+        "finalPrice": 19.20,
+        "shade": "N/A",
+        "volume": "200ml",
+        "description": "Rich body butter with shea butter for deep moisturization",
+        "rating": 4.7,
+        "stock": 92,
+        "imageUrl": "https://example.com/images/bodybutter1.jpg",
+        "expirationDate": "2025-07-15",
+        "skinType": "Dry skin",
+        "features": [
+            "24-hour hydration",
+            "Non-greasy",
+            "Natural fragrance"
+        ],
+        "ingredients": [
+            "Shea Butter",
+            "Cocoa Butter",
+            "Coconut Oil",
+            "Vitamin E"
+        ]
+    },
+    {
+        "id": "COS010",
+        "name": "Gentle Cleansing Milk",
+        "brand": "PureCare",
+        "category": "Cleanser",
+        "price": 21.50,
+        "discount": 10,
+        "finalPrice": 19.35,
+        "shade": "N/A",
+        "volume": "200ml",
+        "description": "Milk cleanser that removes makeup and impurities without stripping skin",
+        "rating": 4.3,
+        "stock": 118,
+        "imageUrl": "https://example.com/images/cleanser1.jpg",
+        "expirationDate": "2025-03-10",
+        "skinType": "Sensitive skin",
+        "features": [
+            "Soap-free",
+            "pH-balanced",
+            "Hypoallergenic"
+        ],
+        "ingredients": [
+            "Water",
+            "Glycerin",
+            "Cetearyl Alcohol",
+            "Chamomile Extract"
+        ]
+    },
+    {
+        "id": "COS011",
+        "name": "Vibrant Eyeshadow Palette",
+        "brand": "ColorPop",
+        "category": "Eyeshadow",
+        "price": 35.00,
+        "discount": 0,
+        "finalPrice": 35.00,
+        "shade": "12-Color Sunset Collection",
+        "volume": "12g",
+        "description": "Highly pigmented eyeshadow palette with matte and shimmer shades",
+        "rating": 4.6,
+        "stock": 87,
+        "imageUrl": "https://example.com/images/palette1.jpg",
+        "expirationDate": "2025-05-20",
+        "skinType": "All skin types",
+        "features": [
+            "Blendable formula",
+            "Long-lasting",
+            "Cruelty-free"
+        ],
+        "ingredients": [
+            "Mica",
+            "Talc",
+            "Iron Oxides",
+            "Magnesium Stearate"
+        ]
+    },
+    {
+        "id": "COS012",
+        "name": "Age-Defying Night Cream",
+        "brand": "TimelessBeauty",
+        "category": "Moisturizer",
+        "price": 52.00,
+        "discount": 15,
+        "finalPrice": 44.20,
+        "shade": "N/A",
+        "volume": "50ml",
+        "description": "Rich night cream with retinol to reduce fine lines and wrinkles",
+        "rating": 4.5,
+        "stock": 63,
+        "imageUrl": "https://example.com/images/nightcream1.jpg",
+        "expirationDate": "2025-09-30",
+        "skinType": "Mature skin",
+        "features": [
+            "Anti-aging",
+            "Dermatologist tested",
+            "Non-comedogenic"
+        ],
+        "ingredients": [
+            "Water",
+            "Retinol",
+            "Peptides",
+            "Hyaluronic Acid",
+            "Vitamin E"
+        ]
+    },
+    {
+        "id": "COS013",
+        "name": "Volumizing Hair Spray",
+        "brand": "LuxeLocks",
+        "category": "Hair Care",
+        "price": 18.99,
+        "discount": 25,
+        "finalPrice": 14.24,
+        "shade": "N/A",
+        "volume": "250ml",
+        "description": "Lightweight hairspray that provides volume and hold without stiffness",
+        "rating": 4.1,
+        "stock": 145,
+        "imageUrl": "https://example.com/images/hairspray1.jpg",
+        "expirationDate": "2024-11-15",
+        "skinType": "All hair types",
+        "features": [
+            "Fast-drying",
+            "Brushable",
+            "No flaking"
+        ],
+        "ingredients": [
+            "Alcohol Denat",
+            "Water",
+            "VP/VA Copolymer",
+            "Fragrance"
+        ]
+    },
+    {
+        "id": "COS014",
+        "name": "Nourishing Cuticle Oil",
+        "brand": "PerfectNails",
+        "category": "Nail Care",
+        "price": 12.50,
+        "discount": 0,
+        "finalPrice": 12.50,
+        "shade": "Clear",
+        "volume": "10ml",
+        "description": "Jojoba and vitamin E oil to strengthen nails and condition cuticles",
+        "rating": 4.4,
+        "stock": 98,
+        "imageUrl": "https://example.com/images/cuticleoil1.jpg",
+        "expirationDate": "2025-08-10",
+        "skinType": "All skin types",
+        "features": [
+            "Quick-absorbing",
+            "Non-greasy",
+            "Natural ingredients"
+        ],
+        "ingredients": [
+            "Jojoba Oil",
+            "Vitamin E",
+            "Sweet Almond Oil",
+            "Lavender Oil"
+        ]
+    },
+    {
+        "id": "COS015",
+        "name": "Brightening Vitamin C Serum",
+        "brand": "GlowUp",
+        "category": "Serum",
+        "price": 42.00,
+        "discount": 20,
+        "finalPrice": 33.60,
+        "shade": "N/A",
+        "volume": "30ml",
+        "description": "Potent vitamin C serum to brighten skin and even out skin tone",
+        "rating": 4.7,
+        "stock": 76,
+        "imageUrl": "https://example.com/images/vitaminCserum1.jpg",
+        "expirationDate": "2025-06-15",
+        "skinType": "All skin types",
+        "features": [
+            "Antioxidant protection",
+            "Paraben-free",
+            "Cruelty-free"
+        ],
+        "ingredients": [
+            "Water",
+            "Vitamin C",
+            "Hyaluronic Acid",
+            "Ferulic Acid"
+        ]
+    },
+    {
+        "id": "COS016",
+        "name": "Gentle Exfoliating Scrub",
+        "brand": "SmoothSkin",
+        "category": "Exfoliator",
+        "price": 24.99,
+        "discount": 10,
+        "finalPrice": 22.49,
+        "shade": "N/A",
+        "volume": "100ml",
+        "description": "Microbead-free facial scrub with natural fruit enzymes",
+        "rating": 4.3,
+        "stock": 102,
+        "imageUrl": "https://example.com/images/scrub1.jpg",
+        "expirationDate": "2025-02-28",
+        "skinType": "Normal to oily skin",
+        "features": [
+            "Biodegradable exfoliants",
+            "Non-irritating",
+            "Dermatologist tested"
+        ],
+        "ingredients": [
+            "Water",
+            "Jojoba Beads",
+            "Papaya Enzyme",
+            "Aloe Vera"
+        ]
+    },
+    {
+        "id": "COS017",
+        "name": "Long-Lasting Setting Spray",
+        "brand": "MakeupPro",
+        "category": "Setting Spray",
+        "price": 28.00,
+        "discount": 0,
+        "finalPrice": 28.00,
+        "shade": "N/A",
+        "volume": "100ml",
+        "description": "Mist that locks makeup in place for up to 16 hours",
+        "rating": 4.5,
+        "stock": 134,
+        "imageUrl": "https://example.com/images/settingspray1.jpg",
+        "expirationDate": "2024-12-20",
+        "skinType": "All skin types",
+        "features": [
+            "Oil-control",
+            "Smudge-proof",
+            "Temperature-resistant"
+        ],
+        "ingredients": [
+            "Water",
+            "Alcohol Denat",
+            "Film-formers",
+            "Botanical Extracts"
+        ]
+    },
+    {
+        "id": "COS018",
+        "name": "Nourishing Lip Balm",
+        "brand": "SoftLips",
+        "category": "Lip Care",
+        "price": 8.99,
+        "discount": 0,
+        "finalPrice": 8.99,
+        "shade": "Clear",
+        "volume": "5g",
+        "description": "Hydrating lip balm with SPF 15 for soft, protected lips",
+        "rating": 4.2,
+        "stock": 267,
+        "imageUrl": "https://example.com/images/lipbalm1.jpg",
+        "expirationDate": "2025-04-05",
+        "skinType": "All skin types",
+        "features": [
+            "SPF 15",
+            "No artificial flavors",
+            "Non-sticky"
+        ],
+        "ingredients": [
+            "Petrolatum",
+            "Beeswax",
+            "Sunscreen",
+            "Vitamin E"
+        ]
+    },
+    {
+        "id": "COS019",
+        "name": "Shimmering Body Oil",
+        "brand": "GlowLux",
+        "category": "Body Care",
+        "price": 32.50,
+        "discount": 15,
+        "finalPrice": 27.63,
+        "shade": "Golden Bronze",
+        "volume": "100ml",
+        "description": "Lightweight body oil with subtle shimmer for glowing skin",
+        "rating": 4.6,
+        "stock": 84,
+        "imageUrl": "https://example.com/images/bodyoil1.jpg",
+        "expirationDate": "2025-07-20",
+        "skinType": "All skin types",
+        "features": [
+            "Quick-absorbing",
+            "Non-greasy",
+            "Vegan"
+        ],
+        "ingredients": [
+            "Jojoba Oil",
+            "Mica",
+            "Vitamin E",
+            "Fragrance"
+        ]
+    },
+    {
+        "id": "COS020",
+        "name": "Acne Control Spot Treatment",
+        "brand": "ClearSkin",
+        "category": "Acne Treatment",
+        "price": 15.99,
+        "discount": 20,
+        "finalPrice": 12.79,
+        "shade": "N/A",
+        "volume": "15ml",
+        "description": "Fast-acting spot treatment with salicylic acid to clear blemishes",
+        "rating": 4.1,
+        "stock": 178,
+        "imageUrl": "https://example.com/images/spottreatment1.jpg",
+        "expirationDate": "2024-10-30",
+        "skinType": "Acne-prone skin",
+        "features": [
+            "Dermatologist tested",
+            "Non-comedogenic",
+            "Oil-free"
+        ],
+        "ingredients": [
+            "Water",
+            "Salicylic Acid",
+            "Tea Tree Oil",
+            "Witch Hazel"
+        ]
+    },
+    {
+        "id": "COS021",
+        "name": "Smoothing Hair Serum",
+        "brand": "SilkyStrands",
+        "category": "Hair Care",
+        "price": 26.00,
+        "discount": 10,
+        "finalPrice": 23.40,
+        "shade": "N/A",
+        "volume": "50ml",
+        "description": "Frizz-control serum for smooth, shiny hair",
+        "rating": 4.4,
+        "stock": 92,
+        "imageUrl": "https://example.com/images/hairserum1.jpg",
+        "expirationDate": "2025-05-15",
+        "skinType": "All hair types",
+        "features": [
+            "Heat protection",
+            "Lightweight",
+            "Non-greasy"
+        ],
+        "ingredients": [
+            "Cyclopentasiloxane",
+            "Dimethiconol",
+            "Argan Oil",
+            "Fragrance"
+        ]
+    },
+    {
+        "id": "COS022",
+        "name": "Waterproof Eyebrow Pencil",
+        "brand": "BrowPerfect",
+        "category": "Eyebrow",
+        "price": 14.99,
+        "discount": 0,
+        "finalPrice": 14.99,
+        "shade": "Medium Brown",
+        "volume": "3g",
+        "description": "Long-wearing eyebrow pencil with spoolie for natural-looking brows",
+        "rating": 4.3,
+        "stock": 156,
+        "imageUrl": "https://example.com/images/browpencil1.jpg",
+        "expirationDate": "2024-11-25",
+        "skinType": "All skin types",
+        "features": [
+            "Waterproof",
+            "Smudge-proof",
+            "Self-sharpening"
+        ],
+        "ingredients": [
+            "Ceresin Wax",
+            "Iron Oxides",
+            "Stearic Acid",
+            "Vitamin E"
+        ]
+    },
+    {
+        "id": "COS023",
+        "name": "Moisturizing Hand Cream",
+        "brand": "SoftHands",
+        "category": "Hand Care",
+        "price": 10.99,
+        "discount": 25,
+        "finalPrice": 8.24,
+        "shade": "N/A",
+        "volume": "75ml",
+        "description": "Rich hand cream with shea butter to soften and protect hands",
+        "rating": 4.5,
+        "stock": 203,
+        "imageUrl": "https://example.com/images/handcream1.jpg",
+        "expirationDate": "2025-03-20",
+        "skinType": "All skin types",
+        "features": [
+            "Non-greasy",
+            "Fast-absorbing",
+            "Dermatologist tested"
+        ],
+        "ingredients": [
+            "Water",
+            "Shea Butter",
+            "Glycerin",
+            "Dimethicone"
+        ]
+    },
+    {
+        "id": "COS024",
+        "name": "Anti-Dandruff Shampoo",
+        "brand": "HealthyScalp",
+        "category": "Hair Care",
+        "price": 16.50,
+        "discount": 0,
+        "finalPrice": 16.50,
+        "shade": "N/A",
+        "volume": "250ml",
+        "description": "Medicated shampoo to control dandruff and relieve scalp irritation",
+        "rating": 4.0,
+        "stock": 189,
+        "imageUrl": "https://example.com/images/shampoo1.jpg",
+        "expirationDate": "2024-09-10",
+        "skinType": "All hair types",
+        "features": "Clinically proven",
+        "pH-balanced": "",
+        "Gentle formula":"",
+        "ingredients": [
+            "Water",
+            "Pyridine Zinc",
+            "Sodium Laureth Sulfate",
+            "Cocamidopropyl Betaine"
+        ]
+    },
+    {
+        "id": "COS025",
+        "name": "Sunscreen Lotion SPF 50",
+        "brand": "SunGuard",
+        "category": "Sun Care",
+        "price": 22.99,
+        "discount": 15,
+        "finalPrice": 19.54,
+        "shade": "N/A",
+        "volume": "150ml",
+        "description": "Broad-spectrum sunscreen with SPF 50 for maximum sun protection",
+        "rating": 4.6,
+        "stock": 145,
+        "imageUrl": "https://example.com/images/sunscreen1.jpg",
+        "expirationDate": "2024-08-30",
+        "skinType": "All skin types",
+        "features": [
+            "Water-resistant",
+            "Non-greasy",
+            "Dermatologist tested"
+        ],
+        "ingredients": [
+            "Water",
+            "Avobenzone",
+            "Homosalate",
+            "Octisalate",
+            "Octocrylene"
+        ]
+    },
+    {
+        "id": "COS026",
+        "name": "Gentle Makeup Remover Wipes",
+        "brand": "PureClean",
+        "category": "Makeup Remover",
+        "price": 12.99,
+        "discount": 20,
+        "finalPrice": 10.39,
+        "shade": "N/A",
+        "volume": "25 wipes",
+        "description": "Soft pre-moistened wipes to effectively remove all makeup",
+        "rating": 4.2,
+        "stock": 234,
+        "imageUrl": "https://example.com/images/wipes1.jpg",
+        "expirationDate": "2024-07-15",
+        "skinType": "All skin types",
+        "features": [
+            "Alcohol-free",
+            "Ophthalmologist tested",
+            "Biodegradable"
+        ],
+        "ingredients": [
+            "Water",
+            "Cetearyl Alcohol",
+            "Polysorbate 20",
+            "Chamomile Extract"
+        ]
+    },
+    {
+        "id": "COS027",
+        "name": "Volumizing Conditioner",
+        "brand": "FullBody",
+        "category": "Hair Care",
+        "price": 18.50,
+        "discount": 0,
+        "finalPrice": 18.50,
+        "shade": "N/A",
+        "volume": "250ml",
+        "description": "Lightweight conditioner that adds volume without weighing hair down",
+        "rating": 4.3,
+        "stock": 167,
+        "imageUrl": "https://example.com/images/conditioner1.jpg",
+        "expirationDate": "2025-01-25",
+        "skinType": "Fine to normal hair",
+        "features": [
+            "Sulfate-free",
+            "Color-safe",
+            "Silicone-free"
+        ],
+        "ingredients": [
+            "Water",
+            "Cetearyl Alcohol",
+            "Panthenol",
+            "Hydrolyzed Wheat Protein"
+        ]
+    },
+    {
+        "id": "COS028",
+        "name": "Matte Finish Powder",
+        "brand": "PerfectFinish",
+        "category": "Face Powder",
+        "price": 24.00,
+        "discount": 10,
+        "finalPrice": 21.60,
+        "shade": "Translucent",
+        "volume": "10g",
+        "description": "Lightweight powder to set makeup and control shine",
+        "rating": 4.4,
+        "stock": 123,
+        "imageUrl": "https://example.com/images/powder1.jpg",
+        "expirationDate": "2025-06-10",
+        "skinType": "Normal to oily skin",
+        "features": [
+            "Oil-absorbing",
+            "Flashback-free",
+            "Fine-milled"
+        ],
+        "ingredients": [
+            "Silica",
+            "Corn Starch",
+            "Magnesium Stearate",
+            "Dimethicone"
+        ]
+    },
+    {
+        "id": "COS029",
+        "name": "Nourishing Foot Cream",
+        "brand": "SoftSteps",
+        "category": "Foot Care",
+        "price": 11.99,
+        "discount": 0,
+        "finalPrice": 11.99,
+        "shade": "N/A",
+        "volume": "100ml",
+        "description": "Rich cream to soften rough, dry feet and heels",
+        "rating": 4.3,
+        "stock": 145,
+        "imageUrl": "https://example.com/images/footcream1.jpg",
+        "expirationDate": "2025-04-20",
+        "skinType": "All skin types",
+        "features": [
+            "Deep moisturizing",
+            "Non-greasy",
+            "Peppermint scent"
+        ],
+        "ingredients": [
+            "Water",
+            "Urea",
+            "Shea Butter",
+            "Peppermint Oil"
+        ]
+    },
+    {
+        "id": "COS030",
+        "name": "Intense Repair Hair Mask",
+        "brand": "RepairPlus",
+        "category": "Hair Care",
+        "price": 28.99,
+        "discount": 25,
+        "finalPrice": 21.74,
+        "shade": "N/A",
+        "volume": "200ml",
+        "description": "Deep conditioning treatment to repair damaged hair",
+        "rating": 4.7,
+        "stock": 89,
+        "imageUrl": "https://example.com/images/hairmask1.jpg",
+        "expirationDate": "2025-08-15",
+        "skinType": "Damaged hair",
+        "features": [
+            "5-minute treatment",
+            "Protein-rich",
+            "Color-safe"
+        ],
+        "ingredients": [
+            "Water",
+            "Cetearyl Alcohol",
+            "Hydrolyzed Keratin",
+            "Argan Oil"
+        ]
+    },
+    {
+        "id": "COS031",
+        "name": "Radiant Highlighter Palette",
+        "brand": "GlowBeam",
+        "category": "Highlighter",
+        "price": 30.00,
+        "discount": 0,
+        "finalPrice": 30.00,
+        "shade": "Golden Hour Collection",
+        "volume": "10g",
+        "description": "Multi-shade highlighter palette for customizable glow",
+        "rating": 4.6,
+        "stock": 76,
+        "imageUrl": "https://example.com/images/highlighter1.jpg",
+        "expirationDate": "2025-07-25",
+        "skinType": "All skin types",
+        "features": [
+            "Buildable",
+            "Smooth blend",
+            "Long-lasting"
+        ],
+        "ingredients": [
+            "Mica",
+            "Titanium Dioxide",
+            "Iron Oxides",
+            "Silica"
+        ]
+    },
+    {
+        "id": "COS032",
+        "name": "Calming Toner",
+        "brand": "SerenitySkin",
+        "category": "Toner",
+        "price": 19.99,
+        "discount": 15,
+        "finalPrice": 16.99,
+        "shade": "N/A",
+        "volume": "200ml",
+        "description": "Alcohol-free toner with chamomile to soothe and balance skin",
+        "rating": 4.4,
+        "stock": 134,
+        "imageUrl": "https://example.com/images/toner1.jpg",
+        "expirationDate": "2025-03-15",
+        "skinType": "Sensitive skin",
+        "features": [
+            "Alcohol-free",
+            "pH-balanced",
+            "Hypoallergenic"
+        ],
+        "ingredients": [
+            "Water",
+            "Glycerin",
+            "Chamomile Extract",
+            "Aloe Vera"
+        ]
+    },
+    {
+        "id": "COS033",
+        "name": "Plumping Lip Gloss",
+        "brand": "Kissable",
+        "category": "Lip Gloss",
+        "price": 16.50,
+        "discount": 0,
+        "finalPrice": 16.50,
+        "shade": "Pink Shimmer",
+        "volume": "6ml",
+        "description": "Glossy lip plumper with minty tingle and subtle shine",
+        "rating": 4.1,
+        "stock": 167,
+        "imageUrl": "https://example.com/images/lipgloss1.jpg",
+        "expirationDate": "2024-10-20",
+        "skinType": "All skin types",
+        "features": [
+            "Plumping effect",
+            "Non-sticky",
+            "Vitamin E enriched"
+        ],
+        "ingredients": [
+            "Petrolatum",
+            "Menthol",
+            "Mica",
+            "Vitamin E"
+        ]
+    },
+    {
+        "id": "COS034",
+        "name": "Deep Cleansing Face Brush",
+        "brand": "CleanTech",
+        "category": "Skincare Tool",
+        "price": 45.00,
+        "discount": 20,
+        "finalPrice": 36.00,
+        "shade": "N/A",
+        "volume": "N/A",
+        "description": "Sonic cleansing brush for deeper pore cleansing",
+        "rating": 4.5,
+        "stock": 56,
+        "imageUrl": "https://example.com/images/facebrush1.jpg",
+        "expirationDate": "N/A",
+        "skinType": "All skin types",
+        "features": [
+            "Water-resistant",
+            "2 speed settings",
+            "USB charging"
+        ],
+        "ingredients": [
+            "N/A"
+        ]
+    },
+    {
+        "id": "COS035",
+        "name": "Firming Body Lotion",
+        "brand": "ToneUp",
+        "category": "Body Care",
+        "price": 29.99,
+        "discount": 10,
+        "finalPrice": 26.99,
+        "shade": "N/A",
+        "volume": "250ml",
+        "description": "Body lotion with collagen and elastin to improve skin firmness",
+        "rating": 4.2,
+        "stock": 98,
+        "imageUrl": "https://example.com/images/bodylotion1.jpg",
+        "expirationDate": "2025-05-30",
+        "skinType": "All skin types",
+        "features": [
+            "Firming",
+            "Moisturizing",
+            "Quick-absorbing"
+        ],
+        "ingredients": [
+            "Water",
+            "Glycerin",
+            "Collagen",
+            "Elastin",
+            "Vitamin E"
+        ]
+    },
+    {
+        "id": "COS036",
+        "name": "Natural Deodorant",
+        "brand": "FreshGuard",
+        "category": "Deodorant",
+        "price": 12.50,
+        "discount": 0,
+        "finalPrice": 12.50,
+        "shade": "N/A",
+        "volume": "50g",
+        "description": "Aluminum-free deodorant with natural odor protection",
+        "rating": 3.9,
+        "stock": 189,
+        "imageUrl": "https://example.com/images/deodorant1.jpg",
+        "expirationDate": "2025-02-10",
+        "skinType": "All skin types",
+        "features": [
+            "Aluminum-free",
+            "Natural ingredients",
+            "Long-lasting"
+        ],
+        "ingredients": [
+            "Coconut Oil",
+            "Cornstarch",
+            "Baking Soda",
+            "Essential Oils"
+        ]
+    },
+    {
+        "id": "COS037",
+        "name": "Nourishing Shaving Cream",
+        "brand": "SmoothGlide",
+        "category": "Shaving",
+        "price": 14.99,
+        "discount": 15,
+        "finalPrice": 12.74,
+        "shade": "N/A",
+        "volume": "150ml",
+        "description": "Rich shaving cream with aloe vera for smooth, irritation-free shave",
+        "rating": 4.3,
+        "stock": 123,
+        "imageUrl": "https://example.com/images/shavingcream1.jpg",
+        "expirationDate": "2025-01-15",
+        "skinType": "All skin types",
+        "features": [
+            "Soothing",
+            "Moisturizing",
+            "Rich lather"
+        ],
+        "ingredients": [
+            "Water",
+            "Stearic Acid",
+            "Aloe Vera",
+            "Vitamin E"
+        ]
+    },
+    {
+        "id": "COS038",
+        "name": "Volumizing Root Lift Spray",
+        "brand": "BigHair",
+        "category": "Hair Care",
+        "price": 19.99,
+        "discount": 0,
+        "finalPrice": 19.99,
+        "shade": "N/A",
+        "volume": "150ml",
+        "description": "Spray that lifts roots for added volume and body",
+        "rating": 4.2,
+        "stock": 145,
+        "imageUrl": "https://example.com/images/rootspray1.jpg",
+        "expirationDate": "2024-11-30",
+        "skinType": "All hair types",
+        "features": [
+            "Lightweight",
+            "Non-sticky",
+            "Heat protection"
+        ],
+        "ingredients": [
+            "Water",
+            "Alcohol Denat",
+            "VP/VA Copolymer",
+            "Panthenol"
+        ]
+    },
+    {
+        "id": "COS039",
+        "name": "Hydrating Sheet Masks",
+        "brand": "HydraMask",
+        "category": "Face Mask",
+        "price": 15.99,
+        "discount": 25,
+        "finalPrice": 11.99,
+        "shade": "N/A",
+        "volume": "5 masks",
+        "description": "Sheet masks infused with hyaluronic acid for intense hydration",
+        "rating": 4.5,
+        "stock": 178,
+        "imageUrl": "https://example.com/images/sheetmask1.jpg",
+        "expirationDate": "2024-08-25",
+        "skinType": "All skin types",
+        "features": [
+            "Single-use",
+            "Individually wrapped",
+            "Dermatologist tested"
+        ],
+        "ingredients": [
+            "Water",
+            "Glycerin",
+            "Hyaluronic Acid",
+            "Botanical Extracts"
+        ]
+    },
+    {
+        "id": "COS040",
+        "name": "Smoothing Primer",
+        "brand": "PerfectCanvas",
+        "category": "Primer",
+        "price": 26.00,
+        "discount": 10,
+        "finalPrice": 23.40,
+        "shade": "N/A",
+        "volume": "30ml",
+        "description": "Silicone-based primer to smooth skin and extend makeup wear",
+        "rating": 4.4,
+        "stock": 92,
+        "imageUrl": "https://example.com/images/primer1.jpg",
+        "expirationDate": "2025-06-20",
+        "skinType": "All skin types",
+        "features": [
+            "Pore-blurring",
+            "Long-lasting",
+            "Lightweight"
+        ],
+        "ingredients": [
+            "Water",
+            "Dimethicone",
+            "Silica",
+            "Glycerin"
+        ]
+    },
+    {
+        "id": "COS041",
+        "name": "Brightening Eye Shadow",
+        "brand": "EyePop",
+        "category": "Eyeshadow",
+        "price": 14.99,
+        "discount": 0,
+        "finalPrice": 14.99,
+        "shade": "Champagne Shimmer",
+        "volume": "3g",
+        "description": "Shimmery eyeshadow to brighten and highlight eyes",
+        "rating": 4.3,
+        "stock": 156,
+        "imageUrl": "https://example.com/images/eyeshadow1.jpg",
+        "expirationDate": "2025-04-15",
+        "skinType": "All skin types",
+        "features": [
+            "Blendable",
+            "Long-lasting",
+            "Cruelty-free"
+        ],
+        "ingredients": [
+            "Mica",
+            "Talc",
+            "Iron Oxides",
+            "Magnesium Stearate"
+        ]
+    },
+    {
+        "id": "COS042",
+        "name": "Moisturizing Face Oil",
+        "brand": "OilGlow",
+        "category": "Facial Oil",
+        "price": 34.99,
+        "discount": 15,
+        "finalPrice": 29.74,
+        "shade": "N/A",
+        "volume": "30ml",
+        "description": "Luxurious facial oil with jojoba and rosehip for glowing skin",
+        "rating": 4.6,
+        "stock": 67,
+        "imageUrl": "https://example.com/images/faceoil1.jpg",
+        "expirationDate": "2025-09-10",
+        "skinType": "Dry to normal skin",
+        "features": [
+            "Fast-absorbing",
+            "Non-greasy",
+            "Natural ingredients"
+        ],
+        "ingredients": [
+            "Jojoba Oil",
+            "Rosehip Oil",
+            "Vitamin E",
+            "Lavender Oil"
+        ]
+    },
+    {
+        "id": "COS043",
+        "name": "Gentle Baby Shampoo",
+        "brand": "LittleOnes",
+        "category": "Baby Care",
+        "price": 11.99,
+        "discount": 0,
+        "finalPrice": 11.99,
+        "shade": "N/A",
+        "volume": "200ml",
+        "description": "Tear-free shampoo and wash for babies' delicate skin and hair",
+        "rating": 4.5,
+        "stock": 134,
+        "imageUrl": "https://example.com/images/babyshampoo1.jpg",
+        "expirationDate": "2025-02-28",
+        "skinType": "Baby skin",
+        "features": [
+            "Tear-free",
+            "Hypoallergenic",
+            "Pediatrician tested"
+        ],
+        "ingredients": [
+            "Water",
+            "Cocamidopropyl Betaine",
+            "Glycerin",
+            "Chamomile Extract"
+        ]
+    },
+    {
+        "id": "COS044",
+        "name": "Anti-Frizz Hair Mist",
+        "brand": "SmoothStrands",
+        "category": "Hair Care",
+        "price": 22.50,
+        "discount": 20,
+        "finalPrice": 18.00,
+        "shade": "N/A",
+        "volume": "150ml",
+        "description": "Lightweight mist to tame frizz and add shine",
+        "rating": 4.2,
+        "stock": 98,
+        "imageUrl": "https://example.com/images/hairmist1.jpg",
+        "expirationDate": "2025-01-10",
+        "skinType": "All hair types",
+        "features": [
+            "Heat protection",
+            "Lightweight",
+            "Silicone-free"
+        ],
+        "ingredients": [
+            "Water",
+            "Argan Oil",
+            "Silk Proteins",
+            "Fragrance"
+        ]
+    },
+    {
+        "id": "COS045",
+        "name": "Soothing After-Sun Lotion",
+        "brand": "CoolDown",
+        "category": "Sun Care",
+        "price": 16.99,
+        "discount": 0,
+        "finalPrice": 16.99,
+        "shade": "N/A",
+        "volume": "200ml",
+        "description": "Cooling lotion with aloe vera to soothe sun-exposed skin",
+        "rating": 4.4,
+        "stock": 167,
+        "imageUrl": "https://example.com/images/aftersun1.jpg",
+        "expirationDate": "2024-09-20",
+        "skinType": "All skin types",
+        "features": [
+            "Cooling effect",
+            "Moisturizing",
+            "Non-greasy"
+        ],
+        "ingredients": [
+            "Water",
+            "Aloe Vera",
+            "Glycerin",
+            "Vitamin E"
+        ]
+    },
+    {
+        "id": "COS046",
+        "name": "Makeup Sponge Set",
+        "brand": "BlendPerfect",
+        "category": "Makeup Tool",
+        "price": 18.00,
+        "discount": 25,
+        "finalPrice": 13.50,
+        "shade": "Assorted",
+        "volume": "3 sponges",
+        "description": "Multi-shaped makeup sponges for flawless application",
+        "rating": 4.3,
+        "stock": 145,
+        "imageUrl": "https://example.com/images/sponges1.jpg",
+        "expirationDate": "N/A",
+        "skinType": "All skin types",
+        "features": [
+            "Latex-free",
+            "Washable",
+            "Multi-use"
+        ],
+        "ingredients": [
+            "N/A"
+        ]
+    },
+    {
+        "id": "COS047",
+        "name": "Nourishing Cuticle Cream",
+        "brand": "PerfectNails",
+        "category": "Nail Care",
+        "price": 9.99,
+        "discount": 0,
+        "finalPrice": 9.99,
+        "shade": "N/A",
+        "volume": "15g",
+        "description": "Rich cream to condition cuticles and promote healthy nail growth",
+        "rating": 4.2,
+        "stock": 189,
+        "imageUrl": "https://example.com/images/cuticlecream1.jpg",
+        "expirationDate": "2025-03-25",
+        "skinType": "All skin types",
+        "features": [
+            "Non-greasy",
+            "Quick-absorbing",
+            "Natural ingredients"
+        ],
+        "ingredients": [
+            "Shea Butter",
+            "Jojoba Oil",
+            "Vitamin E",
+            "Beeswax"
+        ]
+    },
+    {
+        "id": "COS048",
+        "name": "Color-Correcting Concealer",
+        "brand": "FlawlessFace",
+        "category": "Concealer",
+        "price": 19.99,
+        "discount": 10,
+        "finalPrice": 17.99,
+        "shade": "Green",
+        "volume": "5ml",
+        "description": "Color-correcting concealer to neutralize redness",
+        "rating": 4.1,
+        "stock": 123,
+        "imageUrl": "https://example.com/images/concealer1.jpg",
+        "expirationDate": "2024-12-15",
+        "skinType": "All skin types",
+        "features": [
+            "Full coverage",
+            "Long-lasting",
+            "Non-creasing"
+        ],
+        "ingredients": [
+            "Water",
+            "Cyclopentasiloxane",
+            "Titanium Dioxide",
+            "Iron Oxides"
+        ]
+    },
+    {
+        "id": "COS049",
+        "name": "Gentle Exfoliating Toner",
+        "brand": "RenewSkin",
+        "category": "Toner",
+        "price": 21.50,
+        "discount": 0,
+        "finalPrice": 21.50,
+        "shade": "N/A",
+        "volume": "200ml",
+        "description": "Glycolic acid toner to gently exfoliate and brighten skin",
+        "rating": 4.3,
+        "stock": 89,
+        "imageUrl": "https://example.com/images/exfoliatingtoner1.jpg",
+        "expirationDate": "2025-05-05",
+        "skinType": "Normal to oily skin",
+        "features": [
+            "Exfoliating",
+            "Brightening",
+            "Alcohol-free"
+        ],
+        "ingredients": [
+            "Water",
+            "Glycolic Acid",
+            "Glycerin",
+            "Witch Hazel"
+        ]
+    },
+    {
+        "id": "COS050",
+        "name": "Volumizing Mascara Duo",
+        "brand": "LashBoost",
+        "category": "Mascara",
+        "price": 28.00,
+        "discount": 15,
+        "finalPrice": 23.80,
+        "shade": "Black",
+        "volume": "2 x 10ml",
+        "description": "Mascara duo with volumizing and lengthening formulas",
+        "rating": 4.5,
+        "stock": 67,
+        "imageUrl": "https://example.com/images/mascaraduo1.jpg",
+        "expirationDate": "2024-11-10",
+        "skinType": "All skin types",
+        "features": [
+            "2-step system",
+            "Smudge-proof",
+            "Water-resistant"
+        ],
+        "ingredients": [
+            "Water",
+            "Beeswax",
+            "Iron Oxides",
+            "Panthenol"
+        ]
+    }
+]
