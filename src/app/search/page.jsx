@@ -1,36 +1,31 @@
-// src/app/category/[slug]/page.jsx
-"use client";
-import { useState, useEffect } from 'react';
+// app/search/page.jsx
+'use client';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
 
-const CategoryPage = () => {
+// Wrap the component in Suspense to fix the useSearchParams warning
+function SearchResultsWrapper() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <SearchResults />
+        </Suspense>
+    );
+}
+
+function SearchResults() {
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [sortBy, setSortBy] = useState('default');
-    const [filterPrice, setFilterPrice] = useState({ min: 0, max: 1000 });
-    const [filteredProducts, setFilteredProducts] = useState([]);
-    const [categorySlug, setCategorySlug] = useState('');
-    const params = useParams();
-
-    // Convert URL slug back to category name
-    const getCategoryName = (slug) => {
-        if (!slug) return '';
-        return slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    };
-
-    // Set category slug when params are available
-    useEffect(() => {
-        if (params.slug) {
-            setCategorySlug(params.slug);
-        }
-    }, [params]);
+    const [sortBy, setSortBy] = useState('relevance');
+    const searchParams = useSearchParams();
+    const query = searchParams.get('q') || '';
 
     useEffect(() => {
         const fetchProducts = async () => {
             try {
+                setIsLoading(true);
                 const response = await fetch('/data.json');
                 if (!response.ok) {
                     throw new Error('Failed to fetch products');
@@ -47,74 +42,77 @@ const CategoryPage = () => {
         fetchProducts();
     }, []);
 
-    // Filter products by category
-    useEffect(() => {
-        if (products.length > 0 && categorySlug) {
-            const categoryName = getCategoryName(categorySlug);
-            const categoryProducts = products.filter(product =>
-                product.category.toLowerCase() === categoryName.toLowerCase()
-            );
-            setFilteredProducts(categoryProducts);
-        }
-    }, [products, categorySlug]);
+    // Calculate relevance score for sorting
+    const calculateRelevanceScore = (product, query) => {
+        const searchTerm = query.toLowerCase();
+        const name = product.name.toLowerCase();
+        const brand = product.brand.toLowerCase();
+        const category = product.category.toLowerCase();
+        const description = product.description.toLowerCase();
 
-    // Sort products
-    useEffect(() => {
-        let sorted = [...filteredProducts];
+        let score = 0;
 
-        switch (sortBy) {
-            case 'price-low':
-                sorted.sort((a, b) => (a.finalPrice || a.price) - (b.finalPrice || b.price));
-                break;
-            case 'price-high':
-                sorted.sort((a, b) => (b.finalPrice || b.price) - (a.finalPrice || a.price));
-                break;
-            case 'rating':
-                sorted.sort((a, b) => b.rating - a.rating);
-                break;
-            case 'name':
-                sorted.sort((a, b) => a.name.localeCompare(b.name));
-                break;
-            default:
-                // Keep original order
-                break;
-        }
+        // Exact match in name gets highest score
+        if (name === searchTerm) score += 100;
+        // Name starts with search term
+        else if (name.startsWith(searchTerm)) score += 80;
+        // Name contains search term
+        else if (name.includes(searchTerm)) score += 60;
 
-        setFilteredProducts(sorted);
-    }, [sortBy]);
+        // Brand match
+        if (brand === searchTerm) score += 50;
+        else if (brand.startsWith(searchTerm)) score += 40;
+        else if (brand.includes(searchTerm)) score += 30;
 
-    // Filter by price
-    useEffect(() => {
-        if (products.length > 0 && categorySlug) {
-            const categoryName = getCategoryName(categorySlug);
-            let filtered = products.filter(product =>
-                product.category.toLowerCase() === categoryName.toLowerCase() &&
-                (product.finalPrice || product.price) >= filterPrice.min &&
-                (product.finalPrice || product.price) <= filterPrice.max
-            );
+        // Category match
+        if (category === searchTerm) score += 30;
+        else if (category.startsWith(searchTerm)) score += 20;
+        else if (category.includes(searchTerm)) score += 10;
 
-            // Apply current sort
+        // Description match
+        if (description.includes(searchTerm)) score += 5;
+
+        return score;
+    };
+
+    // Memoize the expensive filtering and sorting operation
+    const sortedProducts = useMemo(() => {
+        if (products.length === 0) return [];
+
+        // Filter products based on search query
+        const filtered = products.filter(product => {
+            const searchTerm = query.toLowerCase();
+            const name = product.name.toLowerCase();
+            const brand = product.brand.toLowerCase();
+            const category = product.category.toLowerCase();
+            const description = product.description.toLowerCase();
+
+            // Check if search term matches any product field
+            return name.includes(searchTerm) ||
+                brand.includes(searchTerm) ||
+                category.includes(searchTerm) ||
+                description.includes(searchTerm);
+        });
+
+        // Sort the filtered products
+        return [...filtered].sort((a, b) => {
             switch (sortBy) {
                 case 'price-low':
-                    filtered.sort((a, b) => (a.finalPrice || a.price) - (b.finalPrice || b.price));
-                    break;
+                    return a.finalPrice - b.finalPrice;
                 case 'price-high':
-                    filtered.sort((a, b) => (b.finalPrice || b.price) - (a.finalPrice || b.price));
-                    break;
+                    return b.finalPrice - a.finalPrice;
                 case 'rating':
-                    filtered.sort((a, b) => b.rating - a.rating);
-                    break;
+                    return b.rating - a.rating;
                 case 'name':
-                    filtered.sort((a, b) => a.name.localeCompare(b.name));
-                    break;
+                    return a.name.localeCompare(b.name);
                 default:
-                    // Keep original order
-                    break;
+                    // Default to relevance (how well the product matches the query)
+                    const aScore = calculateRelevanceScore(a, query);
+                    const bScore = calculateRelevanceScore(b, query);
+                    return bScore - aScore;
             }
-
-            setFilteredProducts(filtered);
-        }
-    }, [filterPrice, products, categorySlug, sortBy]);
+        });
+    }, [products, query, sortBy]);
 
     // Function to render star rating
     const renderRating = (rating) => {
@@ -146,20 +144,18 @@ const CategoryPage = () => {
 
     // Handle add to cart
     const handleAddToCart = (e, product) => {
-        e.stopPropagation();
-        // Add to cart functionality here
+        e.preventDefault();
         console.log(`Added ${product.name} to cart`);
-        // You could show a notification here
     };
 
-    if (isLoading || !categorySlug) {
+    if (isLoading) {
         return (
             <div className="container mx-auto px-4 py-8">
                 <div className="animate-pulse">
                     <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
                         {[...Array(8)].map((_, i) => (
-                            <div key={i} className="animate-pulse">
+                            <div key={i}>
                                 <div className="bg-gray-200 h-48 rounded-lg mb-2"></div>
                                 <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
                                 <div className="h-4 bg-gray-200 rounded w-1/2"></div>
@@ -175,7 +171,7 @@ const CategoryPage = () => {
         return (
             <div className="container mx-auto px-4 py-8">
                 <div className="text-center py-8">
-                    <p className="text-red-500">Error loading products: {error}</p>
+                    <p className="text-red-500">Error loading search results: {error}</p>
                     <button
                         onClick={() => window.location.reload()}
                         className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -187,53 +183,21 @@ const CategoryPage = () => {
         );
     }
 
-    const categoryName = getCategoryName(categorySlug);
-
     return (
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {/* Breadcrumb */}
-            <nav className="text-sm text-gray-500 mb-6 hidden sm:block">
-                <Link href="/" className="hover:text-gray-700">Home</Link>
-                <span className="mx-2">/</span>
-                <Link href="/products" className="hover:text-gray-700">Products</Link>
-                <span className="mx-2">/</span>
-                <span className="text-gray-900">{categoryName}</span>
-            </nav>
-
-            {/* Category Header */}
-            <div className="mb-8">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{categoryName}</h1>
-                <p className="text-gray-600">Discover our range of {categoryName.toLowerCase()} products</p>
+        <div className="container mx-auto px-4 py-8">
+            {/* Search Header */}
+            <div className="mb-6">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                    Search Results for "{query}"
+                </h1>
+                <p className="text-gray-600">
+                    {sortedProducts.length} {sortedProducts.length === 1 ? 'product' : 'products'} found
+                </p>
             </div>
 
-            {/* Filters and Sorting */}
-            <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    {/* Price Filter */}
-                    <div className="flex items-center space-x-4">
-                        <span className="text-sm font-medium text-gray-700">Price:</span>
-                        <div className="flex items-center space-x-2">
-                            <input
-                                type="number"
-                                placeholder="Min"
-                                min="0"
-                                value={filterPrice.min}
-                                onChange={(e) => setFilterPrice(prev => ({ ...prev, min: Number(e.target.value) }))}
-                                className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                            <span>-</span>
-                            <input
-                                type="number"
-                                placeholder="Max"
-                                min="0"
-                                value={filterPrice.max}
-                                onChange={(e) => setFilterPrice(prev => ({ ...prev, max: Number(e.target.value) }))}
-                                className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Sort Options */}
+            {/* Sort Options */}
+            {sortedProducts.length > 0 && (
+                <div className="mb-6 flex justify-end">
                     <div className="flex items-center space-x-2">
                         <span className="text-sm font-medium text-gray-700">Sort by:</span>
                         <select
@@ -241,7 +205,7 @@ const CategoryPage = () => {
                             onChange={(e) => setSortBy(e.target.value)}
                             className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                            <option value="default">Featured</option>
+                            <option value="relevance">Relevance</option>
                             <option value="price-low">Price: Low to High</option>
                             <option value="price-high">Price: High to Low</option>
                             <option value="rating">Rating</option>
@@ -249,17 +213,12 @@ const CategoryPage = () => {
                         </select>
                     </div>
                 </div>
-            </div>
-
-            {/* Products Count */}
-            <div className="mb-4 text-sm text-gray-600">
-                Showing {filteredProducts.length} products
-            </div>
+            )}
 
             {/* Products Grid */}
-            {filteredProducts.length > 0 ? (
+            {sortedProducts.length > 0 ? (
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                    {filteredProducts.map((product) => (
+                    {sortedProducts.map((product) => (
                         <Link href={`/product/${product.id}`} key={product.id} className="group">
                             <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
                                 <div className="relative">
@@ -279,9 +238,9 @@ const CategoryPage = () => {
                                     )}
                                 </div>
 
-                                <div className="p-3 sm:p-4">
+                                <div className="p-3">
                                     <p className="text-xs text-gray-500 mb-1 truncate">{product.brand}</p>
-                                    <h3 className="text-sm font-medium text-gray-900 mb-1 line-clamp-2 min-h-[2.5rem]">{product.name}</h3>
+                                    <h3 className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">{product.name}</h3>
 
                                     <div className="flex items-center mb-2">
                                         {renderRating(product.rating)}
@@ -316,10 +275,10 @@ const CategoryPage = () => {
                 <div className="text-center py-12">
                     <div className="text-gray-500 mb-4">
                         <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                         <p className="text-lg font-medium">No products found</p>
-                        <p className="text-sm mt-2">Try adjusting your filters or browse other categories</p>
+                        <p className="text-sm mt-2">Try searching with different keywords</p>
                     </div>
                     <Link href="/products" className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
                         Browse All Products
@@ -328,6 +287,6 @@ const CategoryPage = () => {
             )}
         </div>
     );
-};
+}
 
-export default CategoryPage;
+export default SearchResultsWrapper;

@@ -95,7 +95,7 @@ const PopularProduct = () => {
         <div className="container mx-auto py-8">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl text-gray-800 font-bold md:text-2xl">Popular Products</h2>
-                <Link href="/products" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                <Link href="/all-products" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
                     View All
                 </Link>
             </div>
