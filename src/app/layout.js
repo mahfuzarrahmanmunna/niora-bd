@@ -37,7 +37,7 @@ export default function RootLayout({ children }) {
             </div>
 
             {/* CONTENT WRAPPER: Provides padding and a card-like background for the content */}
-            <div className="sm:px-6 lg:px-8">
+            <div className="">
               <div className="rounded-lg px-4">
                 {children}
               </div>

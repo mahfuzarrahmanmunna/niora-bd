@@ -9,7 +9,7 @@ export default function Home() {
   return (
     <>
       <ImageSlider />
-      {/* <AllCategoryPage /> */}
+      <AllCategoryPage />
       {/* <CategoryPage /> */}
       <PopularProduct />
       <AllProducts />

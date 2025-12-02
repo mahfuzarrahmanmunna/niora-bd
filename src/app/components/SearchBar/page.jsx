@@ -264,7 +264,7 @@ const SearchBar = () => {
                                     onClick={handleSearch}
                                     className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium"
                                 >
-                                    View all results for "{searchQuery}"
+                                    View all results for `{searchQuery}`
                                 </button>
                             </div>
                         </div>
@@ -383,7 +383,7 @@ const SearchBar = () => {
                             </li>
                             <li>
                                 <Link
-                                    href="/help"
+                                    href="/help-and-support"
                                     className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded"
                                     onClick={handleLinkClick}
                                 >
@@ -391,13 +391,13 @@ const SearchBar = () => {
                                 </Link>
                             </li>
                             <li>
-                                <Link
+                                {/* <Link
                                     href="/settings"
                                     className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded"
                                     onClick={handleLinkClick}
                                 >
                                     Settings
-                                </Link>
+                                </Link> */}
                             </li>
                         </ul>
                     </nav>

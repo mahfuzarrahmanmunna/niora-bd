@@ -5,8 +5,9 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 
-const AllCategoryPage = ({ params }) => {
+const AllCategoryPage = () => {
     const [products, setProducts] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -24,6 +25,13 @@ const AllCategoryPage = ({ params }) => {
 
     const router = useRouter();
     const searchParams = useSearchParams();
+    const pathname = usePathname();
+
+    // Extract slug from pathname
+    const getSlugFromPathname = () => {
+        const pathSegments = pathname.split('/');
+        return pathSegments[pathSegments.length - 1];
+    };
 
     // Convert URL slug back to category name
     const getCategoryName = (slug) => {
@@ -31,18 +39,29 @@ const AllCategoryPage = ({ params }) => {
         return slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     };
 
-    // Set category name from params
+    // Set category name from pathname
     useEffect(() => {
-        if (params?.slug) {
-            const name = getCategoryName(params.slug);
+        const slug = getSlugFromPathname();
+        console.log('Pathname:', pathname);
+        console.log('Extracted slug:', slug);
+
+        if (slug) {
+            const name = getCategoryName(slug);
+            console.log('Converted category name:', name);
             setCategoryName(name);
-            setDebugInfo(prev => ({ ...prev, slug: params.slug, categoryName: name }));
+            setDebugInfo(prev => ({ ...prev, slug, categoryName: name }));
+        } else {
+            console.log('No slug found in pathname');
+            setDebugInfo(prev => ({ ...prev, slug: 'undefined', categoryName: 'undefined' }));
         }
-    }, [params]);
+    }, [pathname]);
 
     // Fetch products and categories
     useEffect(() => {
-        if (!categoryName) return; // Don't fetch until categoryName is set
+        // if (!categoryName) {
+        //     console.log('Category name is empty, skipping fetch');
+        //     return; // Don't fetch until categoryName is set
+        // }
 
         const fetchData = async () => {
             try {

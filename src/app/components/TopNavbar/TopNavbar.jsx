@@ -193,9 +193,9 @@ const TopNavbar = () => {
 
     const navLinks = [
         { href: '/', label: 'Home' },
-        { href: '/products', label: 'All Products' },
+        { href: '/all-products', label: 'All Products' },
         { href: '/deals', label: 'Deals' },
-        { href: '/about', label: 'About' },
+        { href: '/about-us', label: 'About' },
     ];
 
     // Popular categories to show first

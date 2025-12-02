@@ -195,7 +195,7 @@ const CategoryPage = () => {
             <nav className="text-sm text-gray-500 mb-6 hidden sm:block">
                 <Link href="/" className="hover:text-gray-700">Home</Link>
                 <span className="mx-2">/</span>
-                <Link href="/products" className="hover:text-gray-700">Products</Link>
+                <Link href="/all-products" className="hover:text-gray-700">Products</Link>
                 <span className="mx-2">/</span>
                 <span className="text-gray-900">{categoryName}</span>
             </nav>
@@ -321,7 +321,7 @@ const CategoryPage = () => {
                         <p className="text-lg font-medium">No products found</p>
                         <p className="text-sm mt-2">Try adjusting your filters or browse other categories</p>
                     </div>
-                    <Link href="/products" className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                    <Link href="/all-products" className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
                         Browse All Products
                     </Link>
                 </div>
