@@ -1,3 +1,4 @@
+// app/product/[id]/page.jsx
 "use client";
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
@@ -52,48 +53,45 @@ const ProductDetails = () => {
     });
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
     const params = useParams();
-    console.log(reviews)
 
     useEffect(() => {
         const fetchProductData = async () => {
             try {
-                // Fetch product data
-                const productResponse = await fetch('/api/products');
+                setIsLoading(true);
+                
+                // Fetch product by ID directly
+                const productResponse = await fetch(`/api/products/${params.id}`);
+                
                 if (!productResponse.ok) {
                     throw new Error('Failed to fetch product');
                 }
+                
                 const productData = await productResponse.json();
                 
-                // Handle nested data structure
-                let allProducts = [];
-                
-                if (productData.success && Array.isArray(productData.data)) {
-                    if (productData.data.length > 0 && productData.data[0].data && Array.isArray(productData.data[0].data)) {
-                        productData.data.forEach(item => {
-                            if (item.data && Array.isArray(item.data)) {
-                                allProducts = [...allProducts, ...item.data];
-                            }
-                        });
-                    } else {
-                        allProducts = productData.data;
-                    }
+                if (!productData.success) {
+                    throw new Error(productData.message || 'Product not found');
                 }
                 
-                // Find the specific product by ID
-                const foundProduct = allProducts.find(p => p.id === params.id);
-
-                if (!foundProduct) {
-                    throw new Error('Product not found');
-                }
-
+                const foundProduct = productData.data;
                 setProduct(foundProduct);
 
-                // Get related products from same category
-                const related = allProducts.filter(p => 
-                    p.category === foundProduct.category && p.id !== foundProduct.id
-                ).slice(0, 8);
-
-                setRelatedProducts(related);
+                // Fetch all products to find related ones
+                const allProductsResponse = await fetch('/api/products');
+                if (allProductsResponse.ok) {
+                    const allProductsData = await allProductsResponse.json();
+                    
+                    let allProducts = [];
+                    if (allProductsData.success && Array.isArray(allProductsData.data)) {
+                        allProducts = allProductsData.data;
+                    }
+                    
+                    // Get related products from same category
+                    const related = allProducts.filter(p => 
+                        p.category === foundProduct.category && p.id !== foundProduct.id
+                    ).slice(0, 8);
+                    
+                    setRelatedProducts(related);
+                }
 
                 // Fetch reviews for this specific product
                 try {
@@ -201,7 +199,7 @@ const ProductDetails = () => {
             reader.onloadend = () => {
                 setReviewForm(prev => ({
                     ...prev,
-                    profileImage: file,
+                    profileImage: reader.result, // Store as base64 for upload
                     profileImagePreview: reader.result
                 }));
             };
@@ -209,24 +207,52 @@ const ProductDetails = () => {
         }
     };
 
-    const handleReviewSubmit = (e) => {
+    const handleReviewSubmit = async (e) => {
         e.preventDefault();
         setIsSubmittingReview(true);
 
-        // In a real app, you would submit this to your reviews API
-        setTimeout(() => {
+        try {
+            // Prepare review data
+            const reviewData = {
+                productId: params.id,
+                name: reviewForm.name,
+                email: reviewForm.email,
+                rating: reviewForm.rating,
+                title: reviewForm.title,
+                comment: reviewForm.comment,
+                profileImage: reviewForm.profileImage // Send the base64 image
+            };
+            
+            // Submit review to API
+            const response = await fetch('/api/reviews', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(reviewData),
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to submit review');
+            }
+            
+            const result = await response.json();
+            
+            // Add new review to the list
             const newReview = {
                 id: reviews.length + 1,
                 name: reviewForm.name,
-                profileImage: reviewForm.profileImagePreview,
+                profileImage: result.data.profileImage, // Use the URL returned from ImgBB
                 rating: reviewForm.rating,
                 title: reviewForm.title,
                 comment: reviewForm.comment,
                 date: new Date().toISOString().split('T')[0],
                 verified: false
             };
-
+            
             setReviews(prev => [newReview, ...prev]);
+            
             // Reset form
             setReviewForm({
                 name: '',
@@ -237,12 +263,18 @@ const ProductDetails = () => {
                 profileImage: null,
                 profileImagePreview: '/placeholder-avatar.png'
             });
+            
             if (fileInputRef.current) {
                 fileInputRef.current.value = null;
             }
-            setIsSubmittingReview(false);
+            
             showNotification('Thank you for your review!');
-        }, 1000);
+        } catch (error) {
+            console.error('Error submitting review:', error);
+            showNotification('Failed to submit review. Please try again.');
+        } finally {
+            setIsSubmittingReview(false);
+        }
     };
 
     if (isLoading) {

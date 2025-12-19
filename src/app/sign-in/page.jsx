@@ -23,6 +23,7 @@ export default function LoginPage() {
     useEffect(() => {
         const checkSession = async () => {
             const session = await getSession();
+            console.log(session)
             if (session) {
                 router.push('/dashboard');
             }
@@ -112,7 +113,7 @@ export default function LoginPage() {
                     <h2 className="mt-6 text-2xl font-bold text-gray-900">Sign in to your account</h2>
                     <p className="mt-2 text-sm text-gray-600">
                         Or{' '}
-                        <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
+                        <Link href="/sign-up" className="font-medium text-blue-600 hover:text-blue-500">
                             create a new account
                         </Link>
                     </p>

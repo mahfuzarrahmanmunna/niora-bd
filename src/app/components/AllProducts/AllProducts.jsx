@@ -1,3 +1,4 @@
+// app/products/page.jsx
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
@@ -19,6 +20,8 @@ const AllProducts = () => {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
+                setIsLoading(true);
+                
                 // Fetch data from API
                 const response = await fetch('/api/products');
                 if (!response.ok) {
@@ -26,22 +29,12 @@ const AllProducts = () => {
                 }
                 const data = await response.json();
                 
-                // Handle the nested data structure
+                // Handle nested data structure
                 let allProducts = [];
                 
                 if (data.success && Array.isArray(data.data)) {
-                    // Check if the first item has a nested data property
-                    if (data.data.length > 0 && data.data[0].data && Array.isArray(data.data[0].data)) {
-                        // Extract all products from the nested data arrays
-                        data.data.forEach(item => {
-                            if (item.data && Array.isArray(item.data)) {
-                                allProducts = [...allProducts, ...item.data];
-                            }
-                        });
-                    } else {
-                        // Use data.data directly if it's already an array of products
-                        allProducts = data.data;
-                    }
+                    // Use data.data directly if it's already an array of products
+                    allProducts = data.data;
                 }
                 
                 setProducts(allProducts);
@@ -139,7 +132,7 @@ const AllProducts = () => {
 
     // Handle product click (navigate to product details page)
     const handleProductClick = (product) => {
-        // Navigate to the product details page
+        // Navigate to product details page
         router.push(`/product/${product.id}`);
     };
 
@@ -154,7 +147,7 @@ const AllProducts = () => {
     if (isLoading) {
         return (
             <div className="container mx-auto px-4 py-8">
-                <h2 className="text-2xl font-bold mb-6 text-center">All Products</h2>
+                <h2 className="text-2xl font-bold mb-6 text-center md:text-2xl">All Products</h2>
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
                     {[...Array(8)].map((_, i) => (
                         <div key={i} className="animate-pulse">
