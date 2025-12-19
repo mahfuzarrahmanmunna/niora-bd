@@ -1,8 +1,8 @@
-// src/app/register/page.jsx
 "use client";
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -59,31 +59,59 @@ export default function RegisterPage() {
 
         setIsLoading(true);
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            console.log('Registered with:', formData);
-            alert('Registration successful!');
-            router.push('/sign-in'); // Redirect to sign-in page after successful registration
+            // Register the user
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: formData.name,
+                    email: formData.email,
+                    password: formData.password,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Registration failed');
+            }
+
+            // Automatically log in the user after successful registration
+            const loginResult = await signIn('credentials', {
+                redirect: false,
+                email: formData.email,
+                password: formData.password,
+            });
+
+            if (loginResult?.error) {
+                // If login fails, still show success message but redirect to sign-in
+                alert('Registration successful! Please sign in with your new account.');
+                router.push('/sign-in');
+            } else {
+                // Registration and login successful
+                alert('Registration successful! You are now logged in.');
+                router.push('/dashboard'); // Redirect to dashboard or home page
+            }
         } catch (error) {
             console.error('Registration failed:', error);
-            alert('Registration failed. Please try again.');
+            setErrors({ form: error.message || 'Registration failed. Please try again.' });
         } finally {
             setIsLoading(false);
         }
     };
 
     // Handle social sign-in
-    const handleSocialsign = async (provider) => {
+    const handleSocialSignIn = async (provider) => {
         setSocialLoading(prev => ({ ...prev, [provider]: true }));
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            console.log(`Logging in with ${provider}`);
-            alert(`${provider.charAt(0).toUpperCase() + provider.slice(1)} sign-in successful!`);
-            // In a real app, you would handle the OAuth flow here and redirect the user
+            await signIn(provider, { callbackUrl: '/dashboard' });
         } catch (error) {
             console.error(`${provider} sign-in failed:`, error);
-            alert(`${provider.charAt(0).toUpperCase() + provider.slice(1)} sign-in failed. Please try again.`);
+            setErrors({
+                form: `${provider.charAt(0).toUpperCase() + provider.slice(1)} sign-in failed. Please try again.`
+            });
         } finally {
             setSocialLoading(prev => ({ ...prev, [provider]: false }));
         }
@@ -109,7 +137,7 @@ export default function RegisterPage() {
                 {/* Social sign-in Buttons */}
                 <div className="space-y-3">
                     <button
-                        onClick={() => handleSocialsign('google')}
+                        onClick={() => handleSocialSignIn('google')}
                         disabled={socialLoading.google}
                         className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                     >
@@ -130,7 +158,7 @@ export default function RegisterPage() {
                     </button>
 
                     <button
-                        onClick={() => handleSocialsign ('facebook')}
+                        onClick={() => handleSocialSignIn('facebook')}
                         disabled={socialLoading.facebook}
                         className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                     >
@@ -157,6 +185,24 @@ export default function RegisterPage() {
                         <span className="px-2 bg-gray-50 text-gray-500">Or register with email</span>
                     </div>
                 </div>
+
+                {/* Form Error */}
+                {errors.form && (
+                    <div className="rounded-md bg-red-50 p-4">
+                        <div className="flex">
+                            <div className="flex-shrink-0">
+                                <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                            <div className="ml-3">
+                                <h3 className="text-sm font-medium text-red-800">
+                                    {errors.form}
+                                </h3>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Registration Form */}
                 <form className="space-y-6" onSubmit={handleSubmit} noValidate>

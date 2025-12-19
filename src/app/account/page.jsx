@@ -10,7 +10,7 @@ const MyAccountPage = () => {
     const handleLogout = () => {
         // Simulate logout API call
         console.log('Logging out...');
-        router.push('/login');
+        router.push('/sign-in');
     };
 
     return (

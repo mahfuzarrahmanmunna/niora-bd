@@ -5,8 +5,10 @@ import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { useSession, signOut } from 'next-auth/react';
 
 const TopNavbar = () => {
+    const { data: session, status } = useSession();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -15,6 +17,7 @@ const TopNavbar = () => {
     const [categories, setCategories] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+    const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     const pathname = usePathname();
@@ -22,6 +25,7 @@ const TopNavbar = () => {
     const searchParams = useSearchParams();
     const searchContainerRef = useRef(null);
     const categoryDropdownRef = useRef(null);
+    const profileDropdownRef = useRef(null);
     const debounceTimerRef = useRef(null);
 
     // Fetch all products when component mounts
@@ -84,6 +88,9 @@ const TopNavbar = () => {
             }
             if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target)) {
                 setIsCategoryDropdownOpen(false);
+            }
+            if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+                setIsProfileDropdownOpen(false);
             }
         };
 
@@ -164,6 +171,11 @@ const TopNavbar = () => {
         setIsCategoryDropdownOpen(false);
     };
 
+    const handleSignOut = async () => {
+        await signOut({ redirect: false });
+        router.push('/');
+    };
+
     // Function to render star rating
     const renderRating = (rating) => {
         const fullStars = Math.floor(rating);
@@ -238,8 +250,8 @@ const TopNavbar = () => {
                             <button
                                 onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
                                 className={`px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 flex items-center ${pathname.startsWith('/category')
-                                        ? 'text-indigo-600 bg-indigo-50'
-                                        : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-50'
+                                    ? 'text-indigo-600 bg-indigo-50'
+                                    : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-50'
                                     }`}
                             >
                                 Categories
@@ -387,22 +399,116 @@ const TopNavbar = () => {
                             )}
                         </div>
 
-                        {/* Search Icon (Mobile) */}
-                        <button
-                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                            className="md:hidden p-2 rounded-full text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-all duration-200"
-                        >
-                            <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                        </button>
+                        {/* User Profile Dropdown */}
+                        <div className="relative" ref={profileDropdownRef}>
+                            <button
+                                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                                className="p-2 rounded-full text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-all duration-200"
+                            >
+                                {status === 'loading' ? (
+                                    <div className="h-6 w-6 rounded-full bg-gray-300 animate-pulse"></div>
+                                ) : session ? (
+                                    <div className="h-6 w-6 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-medium">
+                                        {session.user.name ? session.user.name.charAt(0).toUpperCase() : 'U'}
+                                    </div>
+                                ) : (
+                                    <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                )}
+                            </button>
 
-                        {/* User Profile Icon */}
-                        <button className="p-2 rounded-full text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-all duration-200">
-                            <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                        </button>
+                            {/* Profile Dropdown Menu */}
+                            {isProfileDropdownOpen && (
+                                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                                    {status === 'loading' ? (
+                                        <div className="px-4 py-3 text-center">
+                                            <div className="h-4 w-20 bg-gray-300 rounded animate-pulse mx-auto mb-2"></div>
+                                            <div className="h-3 w-32 bg-gray-300 rounded animate-pulse mx-auto"></div>
+                                        </div>
+                                    ) : session ? (
+                                        <>
+                                            <div className="px-4 py-3 border-b border-gray-100">
+                                                <p className="text-sm font-medium text-gray-900">{session.user.name}</p>
+                                                <p className="text-xs text-gray-500 truncate">{session.user.email}</p>
+                                                {session.user.role && (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mt-1">
+                                                        {session.user.role === 'admin' ? 'Admin' : 'User'}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="py-1">
+                                                <Link
+                                                    href="/profile"
+                                                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                                                    onClick={() => setIsProfileDropdownOpen(false)}
+                                                >
+                                                    My Profile
+                                                </Link>
+                                                <Link
+                                                    href="/orders"
+                                                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                                                    onClick={() => setIsProfileDropdownOpen(false)}
+                                                >
+                                                    My Orders
+                                                </Link>
+                                                <Link
+                                                    href="/wishlist"
+                                                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                                                    onClick={() => setIsProfileDropdownOpen(false)}
+                                                >
+                                                    Wishlist
+                                                </Link>
+                                                <Link
+                                                    href="/settings"
+                                                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                                                    onClick={() => setIsProfileDropdownOpen(false)}
+                                                >
+                                                    Settings
+                                                </Link>
+                                                {session.user.role === 'admin' && (
+                                                    <Link
+                                                        href="/dashboard"
+                                                        className="block px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 transition-colors duration-200"
+                                                        onClick={() => setIsProfileDropdownOpen(false)}
+                                                    >
+                                                        Admin Dashboard
+                                                    </Link>
+                                                )}
+                                            </div>
+                                            <div className="py-1 border-t border-gray-100">
+                                                <button
+                                                    onClick={() => {
+                                                        setIsProfileDropdownOpen(false);
+                                                        handleSignOut();
+                                                    }}
+                                                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200"
+                                                >
+                                                    Sign Out
+                                                </button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="py-1">
+                                            <Link
+                                                href="/sign-in"
+                                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                                                onClick={() => setIsProfileDropdownOpen(false)}
+                                            >
+                                                Sign In
+                                            </Link>
+                                            <Link
+                                                href="/sign-up"
+                                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                                                onClick={() => setIsProfileDropdownOpen(false)}
+                                            >
+                                                Create Account
+                                            </Link>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
 
                         {/* Shopping Cart Icon */}
                         <button className="p-2 rounded-full text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 relative transition-all duration-200">
@@ -575,6 +681,77 @@ const TopNavbar = () => {
                                 </Link>
                             )}
                         </div>
+                    </div>
+
+                    {/* Mobile User Section */}
+                    <div className="pt-2 border-t border-gray-100">
+                        {status === 'loading' ? (
+                            <div className="px-3 py-2">
+                                <div className="h-4 w-20 bg-gray-300 rounded animate-pulse mb-2"></div>
+                                <div className="h-3 w-32 bg-gray-300 rounded animate-pulse"></div>
+                            </div>
+                        ) : session ? (
+                            <>
+                                <div className="px-3 py-2">
+                                    <p className="text-sm font-medium text-gray-900">{session.user.name}</p>
+                                    <p className="text-xs text-gray-500 truncate">{session.user.email}</p>
+                                    {session.user.role && (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mt-1">
+                                            {session.user.role === 'admin' ? 'Admin' : 'User'}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="space-y-1">
+                                    <Link
+                                        href="/profile"
+                                        className="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
+                                    >
+                                        My Profile
+                                    </Link>
+                                    <Link
+                                        href="/orders"
+                                        className="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
+                                    >
+                                        My Orders
+                                    </Link>
+                                    <Link
+                                        href="/wishlist"
+                                        className="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
+                                    >
+                                        Wishlist
+                                    </Link>
+                                    {session.user.role === 'admin' && (
+                                        <Link
+                                            href="/dashboard"
+                                            className="block px-3 py-2 text-base text-indigo-600 hover:bg-indigo-50 transition-colors duration-200"
+                                        >
+                                            Admin Dashboard
+                                        </Link>
+                                    )}
+                                    <button
+                                        onClick={handleSignOut}
+                                        className="block w-full text-left px-3 py-2 text-base text-red-600 hover:bg-red-50 transition-colors duration-200"
+                                    >
+                                        Sign Out
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="space-y-1">
+                                <Link
+                                    href="/sign-in"
+                                    className="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
+                                >
+                                    Sign In
+                                </Link>
+                                <Link
+                                    href="/sign-up"
+                                    className="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
+                                >
+                                    Create Account
+                                </Link>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

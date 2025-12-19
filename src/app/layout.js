@@ -1,8 +1,9 @@
+// src/app/layout.js
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import BottomNavbar from "./components/BottomNavbar/BottomNavbar";
-import SearchBar from "./components/SearchBar/page";
-import TopNavbar from "./components/TopNavbar/TopNavbar";
+import Providers from "@/provider/Provider";
+import LayoutContent from "@/provider/LayoutContent";
+// import LayoutContent from "./LayoutContent";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,34 +25,11 @@ export default function RootLayout({ children }) {
     <html lang="en" data-arp="">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-100 text-gray-900 min-h-screen`}
+       cz-shortcut-listen="true"
       >
-        <div className="min-h-screen flex flex-col bg-gray-100 text-gray-900 ">
-          <main className="flex-grow w-full md:max-w-7xl mx-auto">
-
-            {/* MOBILE SEARCH BAR: Visible only on small screens */}
-            <div className="md:hidden p-4 ">
-              <SearchBar />
-            </div>
-            <div className="hidden md:flex">
-              <TopNavbar />
-            </div>
-
-            {/* CONTENT WRAPPER: Provides padding and a card-like background for the content */}
-            <div className="">
-              <div className="rounded-lg px-4">
-                {children}
-              </div>
-            </div>
-          </main>
-
-          {/* 
-            MOBILE BOTTOM NAVBAR: Fixed at the bottom of the screen on mobile.
-            - Hidden on medium screens and up (`md:hidden`).
-          */}
-          <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-lg">
-            <BottomNavbar />
-          </nav>
-        </div>
+        <Providers>
+          <LayoutContent>{children}</LayoutContent>
+        </Providers>
       </body>
     </html>
   );

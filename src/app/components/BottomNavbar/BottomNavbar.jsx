@@ -41,7 +41,7 @@ const BottomNavbar = () => {
     ];
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white text-black border-t border-gray-200 z-50">
+        <nav className="fixed bottom-0 left-0 right-0 bg-gray-200 text-black border-t border-gray-200 z-50">
             <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
                 {navItems.map((item) => (
                     <Link key={item.id} href={item.href} className='flex flex-col items-center'>

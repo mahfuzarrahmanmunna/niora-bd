@@ -1,14 +1,17 @@
 // app/search/page.js
-import { useRouter } from 'next/router';
+'use client'; // Required for client components in App Router
+
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 const SearchResults = () => {
-    const router = useRouter();
+    const searchParams = useSearchParams();
+    const query = searchParams.get('q');
     const [searchResults, setSearchResults] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        if (router.isReady && router.query.q) {
+        if (query) {
             // Here you would typically make an API call to fetch search results
             // For now, we'll just simulate it with a timeout
             setIsLoading(true);
@@ -23,9 +26,9 @@ const SearchResults = () => {
                 setIsLoading(false);
             }, 1000);
         }
-    }, [router.isReady, router.query]);
+    }, [query]);
 
-    if (!router.query.q) {
+    if (!query) {
         return (
             <div className="p-4">
                 <p className="text-center text-gray-500">Please enter a search query</p>
@@ -36,7 +39,7 @@ const SearchResults = () => {
     return (
         <div className="p-4">
             <h1 className="text-xl font-semibold mb-4">
-                Search Results for `{router.query.q}`
+                Search Results for `{query}`
             </h1>
 
             {isLoading ? (
@@ -59,4 +62,13 @@ const SearchResults = () => {
     );
 };
 
-export default SearchResults;
+// Wrap the component in Suspense
+import { Suspense } from 'react';
+
+export default function SearchPage() {
+    return (
+        <Suspense fallback={<div className="p-4"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div></div>}>
+            <SearchResults />
+        </Suspense>
+    );
+}

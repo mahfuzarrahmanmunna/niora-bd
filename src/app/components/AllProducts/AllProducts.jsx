@@ -1,4 +1,3 @@
-// src/app/components/AllProducts/AllProducts.jsx
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
@@ -14,22 +13,41 @@ const AllProducts = () => {
     const [categoriesLoaded, setCategoriesLoaded] = useState(0);
     const [error, setError] = useState(null);
     const observer = useRef();
-    const router = useRouter(); // Initialize the router
+    const router = useRouter(); // Initialize router
     const categoriesPerLoad = 2; // Number of categories to load at a time
 
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                // Fetch data from the public folder
-                const response = await fetch('/data.json');
+                // Fetch data from API
+                const response = await fetch('/api/products');
                 if (!response.ok) {
                     throw new Error('Failed to fetch products');
                 }
                 const data = await response.json();
-                setProducts(data);
+                
+                // Handle the nested data structure
+                let allProducts = [];
+                
+                if (data.success && Array.isArray(data.data)) {
+                    // Check if the first item has a nested data property
+                    if (data.data.length > 0 && data.data[0].data && Array.isArray(data.data[0].data)) {
+                        // Extract all products from the nested data arrays
+                        data.data.forEach(item => {
+                            if (item.data && Array.isArray(item.data)) {
+                                allProducts = [...allProducts, ...item.data];
+                            }
+                        });
+                    } else {
+                        // Use data.data directly if it's already an array of products
+                        allProducts = data.data;
+                    }
+                }
+                
+                setProducts(allProducts);
 
                 // Group products by category
-                const grouped = data.reduce((acc, product) => {
+                const grouped = allProducts.reduce((acc, product) => {
                     if (!acc[product.category]) {
                         acc[product.category] = [];
                     }
@@ -188,7 +206,7 @@ const AllProducts = () => {
                                     <div className="w-full h-40 md:h-48 bg-gray-100 relative overflow-hidden">
                                         {/* Using Next.js Image component */}
                                         <Image
-                                            src={`https://picsum.photos/seed/${product.id}/400/400.jpg`}
+                                            src={product.imageUrl || `https://picsum.photos/seed/${product.id}/400/400.jpg`}
                                             alt={product.name}
                                             fill
                                             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"

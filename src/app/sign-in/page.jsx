@@ -1,8 +1,10 @@
-// src/app/login/page.jsx
+// src/app/sign-in/page.jsx
 "use client";
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { signIn, getSession } from 'next-auth/react';
+import { useEffect } from 'react';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -15,6 +17,18 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [socialLoading, setSocialLoading] = useState({ google: false, facebook: false });
     const [showPassword, setShowPassword] = useState(false);
+    const [loginError, setLoginError] = useState('');
+
+    // Check if user is already logged in
+    useEffect(() => {
+        const checkSession = async () => {
+            const session = await getSession();
+            if (session) {
+                router.push('/dashboard');
+            }
+        };
+        checkSession();
+    }, [router]);
 
     // Handle input changes
     const handleInputChange = (e) => {
@@ -26,6 +40,10 @@ export default function LoginPage() {
         // Clear error for this field when user starts typing
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
+        }
+        // Clear login error when user starts typing
+        if (loginError) {
+            setLoginError('');
         }
     };
 
@@ -50,14 +68,21 @@ export default function LoginPage() {
 
         setIsLoading(true);
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            console.log('Logged in with:', formData);
-            alert('Login successful!');
-            router.push('/'); // Redirect to home page after successful login
+            const result = await signIn('credentials', {
+                redirect: false,
+                email: formData.email,
+                password: formData.password,
+            });
+
+            if (result.error) {
+                setLoginError('Invalid email or password');
+            } else {
+                // Login successful
+                router.push('/dashboard');
+            }
         } catch (error) {
             console.error('Login failed:', error);
-            alert('Login failed. Please check your credentials and try again.');
+            setLoginError('Login failed. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -67,14 +92,10 @@ export default function LoginPage() {
     const handleSocialLogin = async (provider) => {
         setSocialLoading(prev => ({ ...prev, [provider]: true }));
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            console.log(`Logging in with ${provider}`);
-            alert(`${provider.charAt(0).toUpperCase() + provider.slice(1)} login successful!`);
-            // In a real app, you would handle the OAuth flow here and redirect the user
+            await signIn(provider, { callbackUrl: '/dashboard' });
         } catch (error) {
             console.error(`${provider} login failed:`, error);
-            alert(`${provider.charAt(0).toUpperCase() + provider.slice(1)} login failed. Please try again.`);
+            setLoginError(`${provider.charAt(0).toUpperCase() + provider.slice(1)} login failed. Please try again.`);
         } finally {
             setSocialLoading(prev => ({ ...prev, [provider]: false }));
         }
@@ -91,11 +112,29 @@ export default function LoginPage() {
                     <h2 className="mt-6 text-2xl font-bold text-gray-900">Sign in to your account</h2>
                     <p className="mt-2 text-sm text-gray-600">
                         Or{' '}
-                        <Link href="/sign-up" className="font-medium text-blue-600 hover:text-blue-500">
+                        <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
                             create a new account
                         </Link>
                     </p>
                 </div>
+
+                {/* Login Error */}
+                {loginError && (
+                    <div className="rounded-md bg-red-50 p-4">
+                        <div className="flex">
+                            <div className="flex-shrink-0">
+                                <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                            <div className="ml-3">
+                                <h3 className="text-sm font-medium text-red-800">
+                                    {loginError}
+                                </h3>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Social Login Buttons */}
                 <div className="space-y-3">
