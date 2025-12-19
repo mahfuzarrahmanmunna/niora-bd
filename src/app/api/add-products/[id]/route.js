@@ -1,4 +1,4 @@
-// src/app/api/products/[id]/route.js
+// src/app/api/add-products/[id]/route.js
 import { NextResponse } from 'next/server';
 import { dbConnect } from '@/lib/dbConnect';
 import { ObjectId } from 'mongodb';
@@ -8,17 +8,17 @@ export async function GET(request, { params }) {
     try {
         const { id } = params;
 
-        // Connect to the database
+        // Connect to database
         const collection = await dbConnect('products');
 
         // Find the product by ID
         let product;
 
-        // Check if the ID is a valid MongoDB ObjectId
+        // Check if ID is a valid MongoDB ObjectId
         if (ObjectId.isValid(id)) {
             product = await collection.findOne({ _id: new ObjectId(id) });
         } else {
-            // If not, try to find by the custom 'id' field
+            // If not, try to find by custom 'id' field
             product = await collection.findOne({ id: id });
         }
 
@@ -48,17 +48,54 @@ export async function PUT(request, { params }) {
         const { id } = params;
         const updateData = await request.json();
 
-        // Connect to the database
+        // Connect to database
         const collection = await dbConnect('products');
 
         // Add updated timestamp
         updateData.updatedAt = new Date();
 
-        // Handle image file if present
-        if (updateData.imageFile) {
-            // In a real implementation, you would upload to a cloud storage service
-            updateData.imageUrl = `https://example.com/images/${id}.jpg`;
-            delete updateData.imageFile; // Remove the file data from the database record
+        // Handle multiple images if present
+        if (updateData.images && updateData.images.length > 0) {
+            // Upload new images to ImgBB
+            try {
+                const apiKey = 'f2f3f75de26957d089ecdb402788644c';
+                const uploadPromises = [];
+                
+                for (const image of updateData.images) {
+                    // Convert base64 to FormData for ImgBB API
+                    const formData = new FormData();
+                    
+                    // Remove the data:image/...;base64, prefix if present
+                    const base64Data = image.replace(/^data:image\/[a-z]+;base64,/, '');
+                    formData.append('key', apiKey);
+                    formData.append('image', base64Data);
+                    
+                    const uploadPromise = fetch('https://api.imgbb.com/1/upload', {
+                        method: 'POST',
+                        body: formData
+                    }).then(response => response.json());
+                    
+                    uploadPromises.push(uploadPromise);
+                }
+                
+                const results = await Promise.all(uploadPromises);
+                const imageUrls = results.map(result => {
+                    if (result.success) {
+                        return result.data.url;
+                    } else {
+                        throw new Error(result.error?.message || 'Upload failed');
+                    }
+                });
+                
+                updateData.imageUrls = imageUrls;
+                delete updateData.images; // Remove base64 data from database record
+            } catch (error) {
+                console.error('Error uploading images:', error);
+                return NextResponse.json(
+                    { success: false, message: 'Failed to upload images: ' + error.message },
+                    { status: 500 }
+                );
+            }
         }
 
         // Update the product

@@ -21,7 +21,9 @@ import {
   ChevronUp,
   Package,
   Clock,
-  Award
+  Award,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 const ProductDetails = () => {
@@ -35,6 +37,7 @@ const ProductDetails = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [reviews, setReviews] = useState([]);
+    const [reviewsLoading, setReviewsLoading] = useState(true);
     const [isWishlist, setIsWishlist] = useState(false);
     const [showZoom, setShowZoom] = useState(false);
     const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
@@ -52,6 +55,12 @@ const ProductDetails = () => {
         profileImagePreview: '/placeholder-avatar.png'
     });
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+    
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const reviewsPerPage = 6;
+    
     const params = useParams();
 
     useEffect(() => {
@@ -93,26 +102,6 @@ const ProductDetails = () => {
                     setRelatedProducts(related);
                 }
 
-                // Fetch reviews for this specific product
-                try {
-                    const reviewsResponse = await fetch(`/api/reviews?productId=${params.id}`);
-                    if (reviewsResponse.ok) {
-                        const reviewsData = await reviewsResponse.json();
-                        if (reviewsData.success && reviewsData.data) {
-                            setReviews(reviewsData.data);
-                        } else {
-                            setReviews([]);
-                        }
-                    } else {
-                        // If reviews endpoint doesn't exist or fails, just set empty reviews
-                        setReviews([]);
-                    }
-                } catch (err) {
-                    // If reviews fetch fails, just set empty reviews
-                    setReviews([]);
-                    console.error('Failed to fetch reviews:', err);
-                }
-
                 setIsLoading(false);
             } catch (err) {
                 setError(err.message);
@@ -122,6 +111,54 @@ const ProductDetails = () => {
 
         fetchProductData();
     }, [params.id]);
+
+    // Fetch reviews separately with proper encoding
+    useEffect(() => {
+        const fetchReviews = async () => {
+            try {
+                setReviewsLoading(true);
+                
+                // Ensure the productId is properly encoded for the API call
+                const encodedProductId = encodeURIComponent(params.id);
+                console.log('Fetching reviews for productId:', encodedProductId);
+                
+                const reviewsResponse = await fetch(`/api/reviews?productId=${encodedProductId}`);
+                
+                if (!reviewsResponse.ok) {
+                    throw new Error('Failed to fetch reviews');
+                }
+                
+                const reviewsData = await reviewsResponse.json();
+                console.log('Reviews API response:', reviewsData);
+                
+                if (reviewsData.success && reviewsData.data) {
+                    setReviews(reviewsData.data);
+                    // Calculate total pages for pagination
+                    setTotalPages(Math.ceil(reviewsData.data.length / reviewsPerPage));
+                } else {
+                    setReviews([]);
+                    setTotalPages(0);
+                }
+            } catch (err) {
+                console.error('Failed to fetch reviews:', err);
+                setReviews([]);
+                setTotalPages(0);
+            } finally {
+                setReviewsLoading(false);
+            }
+        };
+
+        if (params.id) {
+            fetchReviews();
+        }
+    }, [params.id]);
+
+    // Reset to page 1 when switching tabs
+    useEffect(() => {
+        if (activeTab === 'reviews') {
+            setCurrentPage(1);
+        }
+    }, [activeTab]);
 
     const renderStars = (rating, interactive = false, onChange = null, size = 'normal') => {
         const starSize = size === 'small' ? 'w-4 h-4' : 'w-5 h-5';
@@ -220,7 +257,7 @@ const ProductDetails = () => {
                 rating: reviewForm.rating,
                 title: reviewForm.title,
                 comment: reviewForm.comment,
-                profileImage: reviewForm.profileImage // Send the base64 image
+                profileImage: reviewForm.profileImage // Send to base64 image
             };
             
             // Submit review to API
@@ -241,17 +278,20 @@ const ProductDetails = () => {
             
             // Add new review to the list
             const newReview = {
-                id: reviews.length + 1,
+                _id: result.data._id,
                 name: reviewForm.name,
                 profileImage: result.data.profileImage, // Use the URL returned from ImgBB
                 rating: reviewForm.rating,
                 title: reviewForm.title,
                 comment: reviewForm.comment,
-                date: new Date().toISOString().split('T')[0],
+                createdAt: new Date().toISOString(),
                 verified: false
             };
             
             setReviews(prev => [newReview, ...prev]);
+            
+            // Update total pages
+            setTotalPages(Math.ceil((reviews.length + 1) / reviewsPerPage));
             
             // Reset form
             setReviewForm({
@@ -275,6 +315,22 @@ const ProductDetails = () => {
         } finally {
             setIsSubmittingReview(false);
         }
+    };
+
+    // Pagination functions
+    const paginate = (pageNumber) => setCurrentPage(pageNumber);
+    const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
+    const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
+    
+    // Calculate current reviews to display
+    const indexOfLastReview = currentPage * reviewsPerPage;
+    const indexOfFirstReview = indexOfLastReview - reviewsPerPage;
+    const currentReviews = reviews.slice(indexOfFirstReview, indexOfLastReview);
+    
+    // Format date function
+    const formatDate = (dateString) => {
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        return new Date(dateString).toLocaleDateString(undefined, options);
     };
 
     if (isLoading) {
@@ -828,41 +884,108 @@ const ProductDetails = () => {
                                         </form>
                                     </div>
                                     
-                                    {/* Reviews List */}
-                                    <div className="space-y-6">
-                                        {reviews.length === 0 ? (
+                                    {/* Reviews List with Pagination */}
+                                    <div className="bg-white rounded-lg shadow-sm p-6">
+                                        <div className="flex justify-between items-center mb-6">
+                                            <h3 className="text-lg font-semibold">Customer Reviews</h3>
+                                            <div className="text-sm text-gray-500">
+                                                Showing {indexOfFirstReview + 1} to {Math.min(indexOfLastReview, reviews.length)} of {reviews.length} reviews
+                                            </div>
+                                        </div>
+                                        
+                                        {reviewsLoading ? (
+                                            <div className="flex justify-center items-center py-8">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+                                            </div>
+                                        ) : currentReviews.length === 0 ? (
                                             <p className="text-gray-500 text-center py-8">No reviews yet. Be the first to review this product!</p>
                                         ) : (
-                                            reviews.map(review => (
-                                                <div key={review.id} className="bg-white rounded-lg shadow-sm p-6">
-                                                    <div className="flex items-start space-x-4">
-                                                        <Image
-                                                            src={review.profileImage || '/placeholder-avatar.png'}
-                                                            alt={review.name}
-                                                            width={60}
-                                                            height={60}
-                                                            className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                                                        />
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center justify-between mb-2">
-                                                                <h4 className="font-medium text-gray-900">{review.name}</h4>
-                                                                <span className="text-sm text-gray-500">{review.date}</span>
-                                                            </div>
-                                                            <div className="flex items-center mb-2">
-                                                                {renderStars(review.rating, false, null, 'small')}
-                                                                {review.verified && (
-                                                                    <div className="ml-2 flex items-center text-xs text-green-600">
-                                                                        <Check className="h-3 w-3 mr-1" />
-                                                                        Verified Purchase
+                                            <>
+                                                <div className="space-y-6">
+                                                    {currentReviews.map(review => (
+                                                        <div key={review._id} className="border-b border-gray-100 pb-6 last:border-0">
+                                                            <div className="flex items-start space-x-4">
+                                                                <div className="flex-shrink-0">
+                                                                    <Image
+                                                                        src={review.profileImage || '/placeholder-avatar.png'}
+                                                                        alt={review.name}
+                                                                        width={60}
+                                                                        height={60}
+                                                                        className="w-12 h-12 rounded-full object-cover"
+                                                                    />
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center justify-between mb-2">
+                                                                        <h4 className="font-medium text-gray-900">{review.name}</h4>
+                                                                        <span className="text-sm text-gray-500">{formatDate(review.createdAt)}</span>
                                                                     </div>
-                                                                )}
+                                                                    <div className="flex items-center mb-2">
+                                                                        {renderStars(review.rating, false, null, 'small')}
+                                                                        {review.verified && (
+                                                                            <div className="ml-2 flex items-center text-xs text-green-600">
+                                                                                <Check className="h-3 w-3 mr-1" />
+                                                                                Verified Purchase
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <h5 className="font-medium text-gray-900 mb-1">{review.title}</h5>
+                                                                    <p className="text-gray-700">{review.comment}</p>
+                                                                </div>
                                                             </div>
-                                                            <h5 className="font-medium text-gray-900 mb-1">{review.title}</h5>
-                                                            <p className="text-gray-700">{review.comment}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                
+                                                {/* Pagination */}
+                                                {totalPages > 1 && (
+                                                    <div className="flex items-center justify-between mt-8">
+                                                        <div className="text-sm text-gray-700">
+                                                            Page {currentPage} of {totalPages}
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <button
+                                                                onClick={prevPage}
+                                                                disabled={currentPage === 1}
+                                                                className={`p-2 rounded-md ${
+                                                                    currentPage === 1
+                                                                        ? 'text-gray-400 cursor-not-allowed'
+                                                                        : 'text-gray-700 hover:bg-gray-100'
+                                                                }`}
+                                                            >
+                                                                <ChevronLeft className="h-5 w-5" />
+                                                            </button>
+                                                            
+                                                            <div className="flex space-x-1">
+                                                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNumber => (
+                                                                    <button
+                                                                        key={pageNumber}
+                                                                        onClick={() => paginate(pageNumber)}
+                                                                        className={`px-3 py-1 rounded-md ${
+                                                                            currentPage === pageNumber
+                                                                                ? 'bg-blue-600 text-white'
+                                                                                : 'text-gray-700 hover:bg-gray-100'
+                                                                        }`}
+                                                                    >
+                                                                        {pageNumber}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                            
+                                                            <button
+                                                                onClick={nextPage}
+                                                                disabled={currentPage === totalPages}
+                                                                className={`p-2 rounded-md ${
+                                                                    currentPage === totalPages
+                                                                        ? 'text-gray-400 cursor-not-allowed'
+                                                                        : 'text-gray-700 hover:bg-gray-100'
+                                                                }`}
+                                                            >
+                                                                <ChevronRight className="h-5 w-5" />
+                                                            </button>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 </div>

@@ -1,35 +1,40 @@
-// /src/app/api/add-products/route.js
+// src/app/api/add-products/route.js
 import { NextResponse } from 'next/server';
 import { dbConnect } from '@/lib/dbConnect';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
 
-// Helper function to handle image upload
-async function handleImageUpload(imageFile, productId) {
+// Helper function to upload images to ImgBB
+async function uploadImagesToImgBB(images) {
+    const apiKey = 'f2f3f75de26957d089ecdb402788644c';
+    const uploadPromises = [];
+    
+    for (const image of images) {
+        // Convert base64 to FormData for ImgBB API
+        const formData = new FormData();
+        
+        // Remove the data:image/...;base64, prefix if present
+        const base64Data = image.replace(/^data:image\/[a-z]+;base64,/, '');
+        formData.append('key', apiKey);
+        formData.append('image', base64Data);
+        
+        const uploadPromise = fetch('https://api.imgbb.com/1/upload', {
+            method: 'POST',
+            body: formData
+        }).then(response => response.json());
+        
+        uploadPromises.push(uploadPromise);
+    }
+    
     try {
-        if (!imageFile) return null;
-        
-        // Create uploads directory if it doesn't exist
-        const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'products');
-        await mkdir(uploadDir, { recursive: true });
-        
-        // Generate unique filename
-        const timestamp = Date.now();
-        const fileExtension = imageFile.name.split('.').pop();
-        const fileName = `${productId}_${timestamp}.${fileExtension}`;
-        const filePath = path.join(uploadDir, fileName);
-        
-        // Convert file to buffer
-        const bytes = await imageFile.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        
-        // Write file to filesystem
-        await writeFile(filePath, buffer);
-        
-        // Return URL for the uploaded image
-        return `/uploads/products/${fileName}`;
+        const results = await Promise.all(uploadPromises);
+        return results.map(result => {
+            if (result.success) {
+                return result.data.url;
+            } else {
+                throw new Error(result.error?.message || 'Upload failed');
+            }
+        });
     } catch (error) {
-        console.error('Error uploading image:', error);
+        console.error('Error uploading images:', error);
         throw error;
     }
 }
@@ -57,19 +62,22 @@ export async function POST(request) {
         productData.createdAt = new Date();
         productData.updatedAt = new Date();
 
-        // Handle image upload if present
-        if (productData.imageFile) {
+        // Handle multiple image uploads if present
+        if (productData.images && productData.images.length > 0) {
             try {
-                const imageUrl = await handleImageUpload(productData.imageFile, productData.id);
-                productData.imageUrl = imageUrl;
-                delete productData.imageFile; // Remove the file data from the database record
+                const imageUrls = await uploadImagesToImgBB(productData.images);
+                productData.imageUrls = imageUrls;
+                delete productData.images; // Remove base64 data from database record
             } catch (error) {
-                console.error('Error uploading image:', error);
+                console.error('Error uploading images:', error);
                 return NextResponse.json(
-                    { success: false, message: 'Failed to upload image: ' + error.message },
+                    { success: false, message: 'Failed to upload images: ' + error.message },
                     { status: 500 }
                 );
             }
+        } else {
+            // If no images provided, set an empty array
+            productData.imageUrls = [];
         }
 
         // Convert string values to appropriate types
@@ -92,13 +100,13 @@ export async function POST(request) {
                 _id: result.insertedId,
                 id: productData.id,
                 name: productData.name,
-                imageUrl: productData.imageUrl
+                imageUrls: productData.imageUrls
             }
         }, { status: 201 });
     } catch (error) {
         console.error('Error adding product:', error);
         return NextResponse.json(
-            { success: false, message: 'Failed to add product' },
+            { success: false, message: 'Failed to add product', error: error.message },
             { status: 500 }
         );
     }

@@ -1,9 +1,10 @@
-// pages/manage-products.js
+// src/app/dashboard/manage-products/page.jsx
 "use client";
 import { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { X, Upload, Image as ImageIcon, Plus } from "lucide-react";
 
 // shadcn/ui components
 import { Button } from "@/components/ui/button";
@@ -57,8 +58,9 @@ export default function ManageProducts() {
   const [productToDelete, setProductToDelete] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [imagePreview, setImagePreview] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   const router = useRouter();
 
@@ -172,10 +174,25 @@ export default function ManageProducts() {
   const handleEdit = (product) => {
     // Create a copy of product to avoid direct mutation
     const productCopy = { ...product };
+    
+    // Initialize images array if it doesn't exist
+    if (!productCopy.images) {
+      productCopy.images = productCopy.imageUrl ? [productCopy.imageUrl] : [];
+    }
+    
     setCurrentProduct(productCopy);
     setEditMode(true);
     setDeleteMode(false);
-    setImagePreview(product.imageUrl || "");
+    
+    // Set image previews from existing images
+    setImagePreviews(productCopy.images.map((url, index) => ({
+      id: index,
+      url: url,
+      isNew: false
+    })));
+    
+    // Clear image files
+    setImageFiles([]);
   };
 
   const handleDelete = (product) => {
@@ -184,7 +201,51 @@ export default function ManageProducts() {
     setEditMode(false);
   };
 
-  // In pages/manage-products.js
+  // Function to upload images to ImgBB
+  const uploadImagesToImgBB = async (files) => {
+    const apiKey = 'f2f3f75de26957d089ecdb402788644c';
+    const uploadPromises = [];
+    
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append('key', apiKey);
+      
+      // Convert file to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise((resolve) => {
+        reader.onloadend = () => {
+          // Remove data:image/...;base64, prefix
+          const base64Data = reader.result.replace(/^data:image\/[a-z]+;base64,/, '');
+          formData.append('image', base64Data);
+          resolve();
+        };
+        reader.readAsDataURL(file);
+      });
+      
+      await base64Promise;
+      
+      const uploadPromise = fetch('https://api.imgbb.com/1/upload', {
+        method: 'POST',
+        body: formData
+      }).then(response => response.json());
+      
+      uploadPromises.push(uploadPromise);
+    }
+    
+    try {
+      const results = await Promise.all(uploadPromises);
+      return results.map(result => {
+        if (result.success) {
+          return result.data.url;
+        } else {
+          throw new Error(result.error?.message || 'Upload failed');
+        }
+      });
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      throw error;
+    }
+  };
 
   const handleUpdateProduct = async (e) => {
     e.preventDefault();
@@ -199,7 +260,7 @@ export default function ManageProducts() {
         return;
       }
 
-      // Create a clean product object without the imageFile and _id
+      // Create a clean product object without image files
       const productData = { ...currentProduct };
       delete productData.imageFile; // Remove the file object
       delete productData._id; // Remove the immutable _id field
@@ -215,30 +276,39 @@ export default function ManageProducts() {
         productData.features = productData.features.join(", ");
       }
 
-      // Create FormData for file upload if needed
-      const formData = new FormData();
-
-      // Add all product fields to FormData
-      Object.keys(productData).forEach((key) => {
-        formData.append(key, productData[key]);
-      });
-
-      // Add image file if it exists
-      if (currentProduct.imageFile) {
-        formData.append("image", currentProduct.imageFile);
+      // Upload new images to ImgBB if there are any
+      let imageUrls = [...(currentProduct.images || [])];
+      if (imageFiles.length > 0) {
+        setIsUploadingImages(true);
+        try {
+          const newImageUrls = await uploadImagesToImgBB(imageFiles);
+          imageUrls = [...imageUrls, ...newImageUrls];
+          toast.success('Images uploaded successfully!');
+        } catch (error) {
+          console.error('Error uploading images:', error);
+          toast.error('Failed to upload images. Please try again.');
+          setIsSubmitting(false);
+          setIsUploadingImages(false);
+          return;
+        } finally {
+          setIsUploadingImages(false);
+        }
       }
+
+      // Update the product data with the image URLs
+      productData.images = imageUrls;
 
       console.log("Updating product with ID:", productId);
-      console.log("FormData entries:");
-      for (const pair of formData.entries()) {
-        console.log(pair[0], pair[1]);
-      }
+      console.log("Product data:", productData);
 
       const response = await fetch(
         `/api/products/${encodeURIComponent(productId)}`,
         {
           method: "PUT",
-          body: formData,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(productData),
         }
       );
 
@@ -253,6 +323,8 @@ export default function ManageProducts() {
         fetchProducts(); // Refresh the product list
         setEditMode(false);
         setCurrentProduct(null);
+        setImageFiles([]);
+        setImagePreviews([]);
       } else {
         toast.error(data.message || "Failed to update product");
       }
@@ -304,31 +376,56 @@ export default function ManageProducts() {
     }
   };
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setIsUploading(true);
-
-      try {
-        // Create a preview
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImagePreview(reader.result);
-        };
-        reader.readAsDataURL(file);
-
-        // Store the file in the current product state
-        setCurrentProduct((prev) => ({
-          ...prev,
-          imageFile: file,
-        }));
-      } catch (error) {
-        console.error("Error creating image preview:", error);
-        toast.error("Failed to create image preview");
-      } finally {
-        setIsUploading(false);
-      }
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
+    // Check if adding these files would exceed the limit
+    if (imagePreviews.length + files.length > 5) {
+      toast.error('You can upload a maximum of 5 images');
+      return;
     }
+    
+    // Add new files to existing ones
+    const newFiles = [...imageFiles, ...files];
+    setImageFiles(newFiles);
+    
+    // Create previews for all files
+    const newPreviews = [...imagePreviews];
+    
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newPreviews.push({
+          file,
+          preview: reader.result,
+          id: Date.now() + Math.random(), // Unique ID for each image
+          isNew: true
+        });
+        setImagePreviews([...newPreviews]);
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    // Reset the file input
+    e.target.value = '';
+  };
+
+  const removeImage = (index) => {
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    const newFiles = imageFiles.filter((_, i) => i !== index);
+    setImagePreviews(newPreviews);
+    setImageFiles(newFiles);
+    
+    // Also update the current product's images array
+    const updatedImages = imagePreviews
+      .filter((_, i) => i !== index)
+      .map(preview => preview.url);
+    
+    setCurrentProduct(prev => ({
+      ...prev,
+      images: updatedImages
+    }));
   };
 
   const handleInputChange = (e) => {
@@ -397,22 +494,10 @@ export default function ManageProducts() {
               </p>
             </div>
             <Button
-              onClick={() => router.push("/dashboard/add-product")}
+              onClick={() => router.push("/add-product")}
               className="flex items-center gap-2"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 5v14M5 12h14" />
-              </svg>
+              <Plus className="h-4 w-4" />
               Add New Product
             </Button>
           </div>
@@ -505,12 +590,23 @@ export default function ManageProducts() {
                           <TableRow key={product._id || product.id}>
                             <TableCell>
                               <div className="flex items-center gap-3">
-                                {product.imageUrl && (
+                                {/* Display first image if available */}
+                                {product.images && product.images.length > 0 ? (
+                                  <img
+                                    src={product.images[0]}
+                                    alt={product.name}
+                                    className="h-10 w-10 rounded-md object-cover border"
+                                  />
+                                ) : product.imageUrl ? (
                                   <img
                                     src={product.imageUrl}
                                     alt={product.name}
                                     className="h-10 w-10 rounded-md object-cover border"
                                   />
+                                ) : (
+                                  <div className="h-10 w-10 rounded-md bg-gray-200 flex items-center justify-center">
+                                    <ImageIcon className="h-5 w-5 text-gray-400" />
+                                  </div>
                                 )}
                                 <div>
                                   <div className="font-medium">
@@ -610,20 +706,7 @@ export default function ManageProducts() {
                                 className="mt-4"
                                 onClick={() => router.push("/add-product")}
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="16"
-                                  height="16"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="mr-2"
-                                >
-                                  <path d="M12 5v14M5 12h14" />
-                                </svg>
+                                <Plus className="mr-2 h-4 w-4" />
                                 New Product
                               </Button>
                             </div>
@@ -692,7 +775,7 @@ export default function ManageProducts() {
 
         {/* Edit Product Modal */}
         <Dialog open={editMode} onOpenChange={setEditMode}>
-          <DialogContent className="sm:max-w-[600px] h-[80vh] overflow-auto">
+          <DialogContent className="sm:max-w-[800px] h-[80vh] overflow-auto">
             <DialogHeader>
               <DialogTitle>Edit Product</DialogTitle>
               <DialogDescription>
@@ -760,59 +843,57 @@ export default function ManageProducts() {
                       type="number"
                       value={currentProduct?.price || ""}
                       onChange={handleInputChange}
-                      required
                       step="0.01"
                       min="0"
+                      required
                     />
                   </div>
                 </div>
 
-                {/* Product Image Section */}
+                {/* Product Images Section */}
                 <div className="grid gap-2">
-                  <Label htmlFor="image">Product Image</Label>
-                  <div className="space-y-4">
-                    {imagePreview && (
-                      <div className="flex items-center space-x-4">
-                        <img
-                          src={imagePreview}
-                          alt="Product preview"
-                          className="h-32 w-32 object-cover rounded-md border"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            setImagePreview("");
-                            setCurrentProduct((prev) => ({
-                              ...prev,
-                              imageUrl: "",
-                              imageFile: null,
-                            }));
-                          }}
-                        >
-                          Remove Image
-                        </Button>
+                  <Label>Product Images (Max 5)</Label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                    <div className="space-y-4">
+                      <div className="flex justify-center">
+                        <ImageIcon className="h-12 w-12 text-gray-400" />
+                      </div>
+                      <div className="flex text-sm text-gray-600">
+                        <label htmlFor="image-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500">
+                          <span>Upload files</span>
+                          <input id="image-upload" name="image-upload" type="file" className="sr-only" accept="image/*" multiple onChange={handleImageUpload} />
+                        </label>
+                        <p className="pl-1">or drag and drop</p>
+                      </div>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB each</p>
+                    </div>
+                    
+                    {/* Image previews */}
+                    {imagePreviews.length > 0 && (
+                      <div className="mt-4">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                          {imagePreviews.map((image, index) => (
+                            <div key={image.id} className="relative group">
+                              <img 
+                                src={image.preview} 
+                                alt={`Product preview ${index + 1}`} 
+                                className="h-24 w-full object-cover rounded-md border" 
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeImage(index)}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          {imagePreviews.length} of 5 images uploaded
+                        </p>
                       </div>
                     )}
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() =>
-                          document.getElementById("image-upload").click()
-                        }
-                        disabled={isUploading}
-                      >
-                        {isUploading ? "Uploading..." : "Choose Image"}
-                      </Button>
-                      <Input
-                        id="image-upload"
-                        type="file"
-                        onChange={handleImageUpload}
-                        accept="image/*"
-                        className="hidden"
-                      />
-                    </div>
                   </div>
                 </div>
 
@@ -853,8 +934,8 @@ export default function ManageProducts() {
                       type="number"
                       value={currentProduct?.stock || ""}
                       onChange={handleInputChange}
-                      required
                       min="0"
+                      required
                     />
                   </div>
                   <div className="grid gap-2">
@@ -1008,8 +1089,11 @@ export default function ManageProducts() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Saving..." : "Save Changes"}
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || isUploadingImages}
+                >
+                  {isSubmitting ? (isUploadingImages ? 'Uploading Images...' : 'Saving...') : 'Save Changes'}
                 </Button>
               </DialogFooter>
             </form>
