@@ -35,6 +35,15 @@ const AllProducts = () => {
                 if (data.success && Array.isArray(data.data)) {
                     // Use data.data directly if it's already an array of products
                     allProducts = data.data;
+                } else if (Array.isArray(data)) {
+                    // If response itself is an array
+                    allProducts = data;
+                } else if (data.data && Array.isArray(data.data)) {
+                    // If data.data contains an array
+                    allProducts = data.data;
+                } else {
+                    console.error("Unexpected API response format:", data);
+                    throw new Error("Invalid API response format");
                 }
                 
                 setProducts(allProducts);
@@ -146,16 +155,10 @@ const AllProducts = () => {
 
     if (isLoading) {
         return (
-            <div className="container mx-auto px-4 py-8">
-                <h2 className="text-2xl font-bold mb-6 text-center md:text-2xl">All Products</h2>
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                    {[...Array(8)].map((_, i) => (
-                        <div key={i} className="animate-pulse">
-                            <div className="bg-gray-200 h-48 rounded-lg mb-2"></div>
-                            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                        </div>
-                    ))}
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="flex items-center justify-center space-x-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                    <p className="text-lg font-medium text-blue-600">Loading products...</p>
                 </div>
             </div>
         );
@@ -163,7 +166,7 @@ const AllProducts = () => {
 
     if (error) {
         return (
-            <div className="container mx-auto px-4 py-8">
+            <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center py-8">
                     <p className="text-red-500">Error loading products: {error}</p>
                     <button
@@ -225,11 +228,26 @@ const AllProducts = () => {
                                         <div>
                                             {product.discount > 0 ? (
                                                 <>
-                                                    <span className="text-sm font-bold text-gray-900">${product.finalPrice.toFixed(2)}</span>
-                                                    <span className="text-xs text-gray-500 line-through ml-1">${product.price.toFixed(2)}</span>
+                                                    <span className="text-sm font-bold text-gray-900">
+                                                        {typeof product.finalPrice === 'number' 
+                                                            ? product.finalPrice.toFixed(2) 
+                                                            : parseFloat(product.finalPrice || 0).toFixed(2)
+                                                        }
+                                                    </span>
+                                                    <span className="text-xs text-gray-500 line-through ml-1">
+                                                        {typeof product.price === 'number' 
+                                                            ? product.price.toFixed(2) 
+                                                            : parseFloat(product.price || 0).toFixed(2)
+                                                        }
+                                                    </span>
                                                 </>
                                             ) : (
-                                                <span className="text-sm font-bold text-gray-900">${product.price.toFixed(2)}</span>
+                                                <span className="text-sm font-bold text-gray-900">
+                                                        {typeof product.finalPrice === 'number' 
+                                                            ? product.finalPrice.toFixed(2) 
+                                                            : parseFloat(product.finalPrice || 0).toFixed(2)
+                                                        }
+                                                    </span>
                                             )}
                                         </div>
                                         <button
@@ -251,7 +269,10 @@ const AllProducts = () => {
             {/* Loading indicator for more categories */}
             {loadingMore && (
                 <div className="flex justify-center mt-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                    <div className="flex items-center space-x-4">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                        <p className="text-lg font-medium text-blue-600">Loading more categories...</p>
+                    </div>
                 </div>
             )}
 
