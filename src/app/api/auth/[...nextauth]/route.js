@@ -49,7 +49,7 @@ const handler = NextAuth({
                         email: user.email,
                         name: user.name,
                         image: user.image,
-                        role: user.role, // <-- ADD ROLE TO THE RETURNED USER OBJECT
+                        role: user.role,
                     }
                 } catch (error) {
                     console.error("Auth error:", error)
@@ -73,7 +73,7 @@ const handler = NextAuth({
                             name: user.name,
                             email: user.email,
                             image: user.image,
-                            role: 'user', // <-- SET DEFAULT ROLE FOR SOCIAL SIGN-UPS
+                            role: 'user',
                             provider: account.provider,
                             providerId: account.providerAccountId,
                             verified: true,
@@ -95,7 +95,7 @@ const handler = NextAuth({
             // Persist the user ID and role to the token right after signin
             if (user) {
                 token.sub = user.id
-                token.role = user.role // <-- ADD ROLE TO JWT TOKEN
+                token.role = user.role
             }
             return token
         },
@@ -105,18 +105,19 @@ const handler = NextAuth({
                 session.user.id = token.sub
             }
             if (token.role) {
-                session.user.role = token.role // <-- ADD ROLE TO SESSION OBJECT
+                session.user.role = token.role
             }
             return session
         },
     },
     pages: {
         signIn: '/sign-in',
-        signUp: '/register',
+        signUp: '/sign-up',
     },
     session: {
         strategy: "jwt",
     },
+    secret: process.env.NEXTAUTH_SECRET,
 })
 
 export { handler as GET, handler as POST }

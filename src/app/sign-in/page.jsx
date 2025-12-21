@@ -23,7 +23,6 @@ export default function LoginPage() {
     useEffect(() => {
         const checkSession = async () => {
             const session = await getSession();
-            console.log(session)
             if (session) {
                 router.push('/dashboard');
             }
