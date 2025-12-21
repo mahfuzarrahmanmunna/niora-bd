@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { dbConnect } from '@/lib/dbConnect';
 import { ObjectId } from 'mongodb';
 import { uploadToImgBB } from '@/lib/imgbb';
+import { updateProductRating } from '@/lib/updateProductRating';
 
 // GET all reviews or reviews for a specific product
 export async function GET(request) {
@@ -84,6 +85,14 @@ export async function POST(request) {
         };
         
         const result = await collection.insertOne(newReview);
+        
+        // Update the product's average rating
+        try {
+            await updateProductRating(productId);
+        } catch (ratingError) {
+            console.error('Error updating product rating:', ratingError);
+            // Continue with the response even if rating update fails
+        }
         
         return NextResponse.json({
             success: true,

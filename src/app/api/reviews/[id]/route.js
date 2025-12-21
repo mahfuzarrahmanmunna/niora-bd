@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { dbConnect } from '@/lib/dbConnect';
 import { ObjectId } from 'mongodb';
+import { updateProductRating } from '@/lib/updateProductRating';
 
 // GET a specific review
 export async function GET(request, { params }) {
@@ -75,6 +76,16 @@ export async function PUT(request, { params }) {
             { $set: updateData }
         );
         
+        // Update the product's average rating if the rating was changed
+        if (rating !== undefined) {
+            try {
+                await updateProductRating(existingReview.productId);
+            } catch (ratingError) {
+                console.error('Error updating product rating:', ratingError);
+                // Continue with the response even if rating update fails
+            }
+        }
+        
         return NextResponse.json({
             success: true,
             message: 'Review updated successfully',
@@ -105,6 +116,14 @@ export async function DELETE(request, { params }) {
         }
         
         const result = await collection.deleteOne({ _id: new ObjectId(id) });
+        
+        // Update the product's average rating
+        try {
+            await updateProductRating(existingReview.productId);
+        } catch (ratingError) {
+            console.error('Error updating product rating:', ratingError);
+            // Continue with the response even if rating update fails
+        }
         
         return NextResponse.json({
             success: true,

@@ -208,6 +208,7 @@ const TopNavbar = () => {
         { href: '/all-products', label: 'All Products' },
         { href: '/deals', label: 'Deals' },
         { href: '/about-us', label: 'About' },
+        { href: '/manage-add-to-cart', label: 'Cart' }, // Added cart link
     ];
 
     // Popular categories to show first
@@ -510,15 +511,15 @@ const TopNavbar = () => {
                             )}
                         </div>
 
-                        {/* Shopping Cart Icon */}
-                        <button className="p-2 rounded-full text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 relative transition-all duration-200">
+                        {/* Shopping Cart Icon - Now linked to cart page */}
+                        <Link href="/manage-add-to-cart" className="p-2 rounded-full text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 relative transition-all duration-200">
                             <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                             </svg>
                             <span className="absolute top-1 right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full">
                                 3
                             </span>
-                        </button>
+                        </Link>
 
                         {/* Mobile menu button */}
                         <button
@@ -728,6 +729,12 @@ const TopNavbar = () => {
                                             Admin Dashboard
                                         </Link>
                                     )}
+                                    <Link
+                                        href="/manage-add-to-cart"
+                                        className="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
+                                    >
+                                        My Cart
+                                    </Link>
                                     <button
                                         onClick={handleSignOut}
                                         className="block w-full text-left px-3 py-2 text-base text-red-600 hover:bg-red-50 transition-colors duration-200"
