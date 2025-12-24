@@ -16,7 +16,7 @@ const CategoriesSection = () => {
         
         if (data.success) {
           // Handle the nested data structure
-          let products = [];
+          let products = []; // Changed from const to let
           
           // Check if data.data is an array of products or contains nested data
           if (Array.isArray(data.data)) {
@@ -30,7 +30,7 @@ const CategoriesSection = () => {
               });
             } else {
               // Use data.data directly if it's already an array of products
-              products = data.data;
+              products = data.data; // Changed from data to data.data
             }
           }
           

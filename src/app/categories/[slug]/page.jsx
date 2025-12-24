@@ -60,7 +60,7 @@ const CategoryPage = () => {
 
     // Sort products
     useEffect(() => {
-        let sorted = [...filteredProducts];
+        const sorted = [...filteredProducts];
 
         switch (sortBy) {
             case 'price-low':
@@ -87,7 +87,7 @@ const CategoryPage = () => {
     useEffect(() => {
         if (products.length > 0 && categorySlug) {
             const categoryName = getCategoryName(categorySlug);
-            let filtered = products.filter(product =>
+            const filtered = products.filter(product =>
                 product.category.toLowerCase() === categoryName.toLowerCase() &&
                 (product.finalPrice || product.price) >= filterPrice.min &&
                 (product.finalPrice || product.price) <= filterPrice.max

@@ -1,4 +1,5 @@
 // src/app/products/page.jsx
+
 "use client";
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
@@ -16,12 +17,13 @@ const AllProductsPage = () => {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const response = await fetch('/data.json');
+                const response = await fetch('/api/products');
                 if (!response.ok) {
                     throw new Error('Failed to fetch products');
                 }
                 const data = await response.json();
-                setProducts(data);
+                // Fix: Extract data array from response object
+                setProducts(data.data || []); // Use empty array as fallback
                 setIsLoading(false);
             } catch (err) {
                 setError(err.message);
@@ -32,7 +34,7 @@ const AllProductsPage = () => {
         fetchProducts();
     }, []);
 
-    // Get unique categories for the filter dropdown
+    // Get unique categories for filter dropdown
     const uniqueCategories = useMemo(() => {
         if (!products.length) return [];
         return ['all', ...new Set(products.map(p => p.category))];
@@ -40,7 +42,12 @@ const AllProductsPage = () => {
 
     // Filter and sort products
     const filteredAndSortedProducts = useMemo(() => {
-        let result = [...products];
+        // Add safety check to ensure products is an array
+        if (!Array.isArray(products)) {
+            return [];
+        }
+        
+        let result = [...products]; // Changed from const to let
 
         // 1. Filter by search term
         if (searchTerm) {
@@ -56,18 +63,19 @@ const AllProductsPage = () => {
         }
 
         // 3. Filter by price
-        result = result.filter(product =>
-            product.finalPrice >= filterPrice.min &&
-            product.finalPrice <= filterPrice.max
-        );
+        result = result.filter(product => {
+            // Ensure finalPrice is a number
+            const price = parseFloat(product.finalPrice);
+            return price >= filterPrice.min && price <= filterPrice.max;
+        });
 
         // 4. Sort products
         switch (sortBy) {
             case 'price-low':
-                result.sort((a, b) => a.finalPrice - b.finalPrice);
+                result.sort((a, b) => parseFloat(a.finalPrice) - parseFloat(b.finalPrice));
                 break;
             case 'price-high':
-                result.sort((a, b) => b.finalPrice - a.finalPrice);
+                result.sort((a, b) => parseFloat(b.finalPrice) - parseFloat(a.finalPrice));
                 break;
             case 'rating':
                 result.sort((a, b) => b.rating - a.rating);
@@ -279,11 +287,11 @@ const AllProductsPage = () => {
                                         <div>
                                             {product.discount > 0 ? (
                                                 <>
-                                                    <span className="text-sm font-bold text-gray-900">${product.finalPrice.toFixed(2)}</span>
-                                                    <span className="text-xs text-gray-500 line-through ml-1">${product.price.toFixed(2)}</span>
+                                                    <span className="text-sm font-bold text-gray-900">${parseFloat(product.finalPrice).toFixed(2)}</span>
+                                                    <span className="text-xs text-gray-500 line-through ml-1">${parseFloat(product.price).toFixed(2)}</span>
                                                 </>
                                             ) : (
-                                                <span className="text-sm font-bold text-gray-900">${product.price.toFixed(2)}</span>
+                                                <span className="text-sm font-bold text-gray-900">${parseFloat(product.price).toFixed(2)}</span>
                                             )}
                                         </div>
                                         <button

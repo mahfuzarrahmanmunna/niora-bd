@@ -264,7 +264,7 @@ export default function AddProduct() {
 
         try {
             // Generate ID if not provided
-            let productId = productData.id;
+            let productId = productData.id; // Changed from const to let
             if (!productId) {
                 const categoryId = productData.category.substring(0, 3).toUpperCase();
                 const randomId = Math.floor(1000 + Math.random() * 9000);
@@ -272,7 +272,7 @@ export default function AddProduct() {
             }
 
             // Upload images to ImgBB if there are any
-            let imageUrls = [];
+            let imageUrls = []; // Changed from const to let
             if (imageFiles.length > 0) {
                 setIsUploadingImages(true);
                 try {

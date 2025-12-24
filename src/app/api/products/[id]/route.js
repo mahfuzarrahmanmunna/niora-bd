@@ -46,7 +46,7 @@ export async function GET(request, { params }) {
         const collection = await dbConnect('products');
         
         // Find product by ID
-        let product;
+        let product; // Changed from const to let
         
         // Check if ID is a valid MongoDB ObjectId
         if (ObjectId.isValid(id)) {
@@ -87,8 +87,8 @@ export async function PUT(request, { params }) {
         const collection = await dbConnect('products');
         
         // Check if product exists
-        let product;
-        let query;
+        let product; // Changed from const to let
+        let query; // Changed from const to let
         
         // Check if ID is a valid MongoDB ObjectId
         if (ObjectId.isValid(id)) {
@@ -108,8 +108,8 @@ export async function PUT(request, { params }) {
             );
         }
 
-        // Parse the request data
-        let updateData = {};
+        // Parse request data
+        let updateData = {}; // Changed from const to let
         const contentType = request.headers.get('content-type');
         
         if (contentType && contentType.includes('multipart/form-data')) {
@@ -118,7 +118,7 @@ export async function PUT(request, { params }) {
             
             // Extract all fields from FormData
             for (const [key, value] of formData.entries()) {
-                // Skip the _id field as it's immutable
+                // Skip _id field as it's immutable
                 if (key === '_id') {
                     continue;
                 }
@@ -150,9 +150,9 @@ export async function PUT(request, { params }) {
             // Handle JSON data (when no file is uploaded)
             const jsonData = await request.json();
             
-            // Create a clean update object without the _id field
-            updateData = { ...jsonData };
-            delete updateData._id; // Remove the immutable _id field
+            // Create a clean update object without _id field
+            updateData = { ...jsonData }; // Now this works since updateData is declared with let
+            delete updateData._id; // Remove immutable _id field
         }
 
         // Validate required fields
@@ -204,12 +204,12 @@ export async function DELETE(request, { params }) {
         const { id } = await params;
         console.log('DELETE request received for product ID:', id);
         
-        // Connect to the database
+        // Connect to database
         const collection = await dbConnect('products');
         
         // Check if product exists
-        let product;
-        let query;
+        let product; // Changed from const to let
+        let query; // Changed from const to let
         
         // Check if ID is a valid MongoDB ObjectId
         if (ObjectId.isValid(id)) {

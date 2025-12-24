@@ -16,7 +16,7 @@ export async function GET(request) {
         const sortOrder = searchParams.get('sortOrder') || 'desc';
 
         // Build query object
-        let query = {};
+        const query = {};
 
         // Add category filter if provided
         if (category && category !== 'all') {
@@ -34,7 +34,7 @@ export async function GET(request) {
         }
 
         // Build sort object
-        let sort = {};
+        const sort = {};
         sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
         try {

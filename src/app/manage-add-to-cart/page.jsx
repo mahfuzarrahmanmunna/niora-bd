@@ -146,7 +146,6 @@ const CartPage = () => {
   };
 
   const handleCheckout = async () => {
-    // This function creates an order and redirects to payment page
     try {
       setIsCheckingOut(true);
       const userId = localStorage.getItem("userId");
@@ -157,27 +156,44 @@ const CartPage = () => {
         return;
       }
 
+      // Log the request data for debugging
+      const requestData = {
+        userId,
+        items: cartItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        })),
+        // Note: We are not sending address/paymentMethod here.
+        // The payment page will collect that.
+      };
+      
+      console.log("Checkout request data:", requestData);
+
       // Create an order with 'awaiting_payment' status
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          items: cartItems.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-          })),
-          // Note: We are not sending address/paymentMethod here.
-          // The payment page will collect that.
-        }),
+        body: JSON.stringify(requestData),
       });
 
-      const data = await response.json();
+      // Try to parse the response, but handle cases where the response might be empty
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error("Error parsing response:", parseError);
+        data = { success: false, message: "Invalid response from server" };
+      }
+
+      // Log the full response for debugging
+      console.log("Checkout response status:", response.status);
+      console.log("Checkout response data:", data);
 
       if (!response.ok || !data.success) {
-        // Log the full error for debugging
+        // If we don't have a proper error message, use a generic one
+        const errorMessage = data.message || "Failed to create order. Server returned an error.";
         console.error("Checkout API Error:", response.status, data);
-        throw new Error(data.message || "Failed to create order.");
+        throw new Error(errorMessage);
       }
 
       // On success, redirect to payment page with the new order ID

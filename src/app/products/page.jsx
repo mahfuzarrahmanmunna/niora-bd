@@ -225,11 +225,17 @@ const AllProducts = () => {
                                         <div>
                                             {product.discount > 0 ? (
                                                 <>
-                                                    <span className="text-sm font-bold text-gray-900">${product.finalPrice.toFixed(2)}</span>
-                                                    <span className="text-xs text-gray-500 line-through ml-1">${product.price.toFixed(2)}</span>
+                                                    <span className="text-sm font-bold text-gray-900">
+                                                        ${parseFloat(product.finalPrice || 0).toFixed(2)}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500 line-through ml-1">
+                                                        ${parseFloat(product.price || 0).toFixed(2)}
+                                                    </span>
                                                 </>
                                             ) : (
-                                                <span className="text-sm font-bold text-gray-900">${product.price.toFixed(2)}</span>
+                                                <span className="text-sm font-bold text-gray-900">
+                                                    ${parseFloat(product.price || 0).toFixed(2)}
+                                                </span>
                                             )}
                                         </div>
                                         <button

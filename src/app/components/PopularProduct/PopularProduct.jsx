@@ -13,7 +13,7 @@ const PopularProduct = () => {
         const fetchProducts = async () => {
             try {
                 // Fetch data from the public folder
-                const response = await fetch('/data.json');
+                const response = await fetch('/api/products');
                 if (!response.ok) {
                     throw new Error('Failed to fetch products');
                 }

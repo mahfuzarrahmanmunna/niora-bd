@@ -13,7 +13,7 @@ export async function GET(request) {
         const search = searchParams.get('search');
         
         // Build query object
-        let query = {};
+        const query = {};
         
         // Add search filter if provided
         if (search) {

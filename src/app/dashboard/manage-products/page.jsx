@@ -116,7 +116,7 @@ export default function ManageProducts() {
       const data = await response.json();
 
       // Normalize the response to always get an array of products
-      let productsData = [];
+      const productsData = [];
 
       if (data.success && Array.isArray(data.data)) {
         productsData = data.data;
@@ -145,7 +145,7 @@ export default function ManageProducts() {
       return;
     }
 
-    let filtered = [...products];
+    const filtered = [...products];
 
     // Filter by search term
     if (searchTerm) {
@@ -277,7 +277,7 @@ export default function ManageProducts() {
       }
 
       // Upload new images to ImgBB if there are any
-      let imageUrls = [...(currentProduct.images || [])];
+      const imageUrls = [...(currentProduct.images || [])];
       if (imageFiles.length > 0) {
         setIsUploadingImages(true);
         try {

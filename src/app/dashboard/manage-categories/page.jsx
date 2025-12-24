@@ -65,7 +65,7 @@ export default function ManageCategories() {
                 
                 if (data.success) {
                     // Handle different possible response structures
-                    let categoriesData = [];
+                    const categoriesData = [];
                     
                     if (Array.isArray(data.data)) {
                         categoriesData = data.data;
@@ -94,7 +94,7 @@ export default function ManageCategories() {
     };
 
     const filterCategories = () => {
-        let filtered = [...categories];
+        const filtered = [...categories];
 
         // Filter by search term
         if (searchTerm) {

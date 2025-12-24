@@ -28,6 +28,7 @@ import {
 
 const ProductDetails = () => {
   const [product, setProduct] = useState(null);
+  const [debugProduct, setDebugProduct] = useState(null); // Debug state
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -83,13 +84,14 @@ const ProductDetails = () => {
 
         const foundProduct = productData.data;
         setProduct(foundProduct);
+        setDebugProduct(JSON.stringify(foundProduct, null, 2)); // Debug info
 
         // Fetch all products to find related ones
         const allProductsResponse = await fetch("/api/products");
         if (allProductsResponse.ok) {
           const allProductsData = await allProductsResponse.json();
 
-          let allProducts = [];
+          let allProducts = []; // Changed from const to let
           if (allProductsData.success && Array.isArray(allProductsData.data)) {
             allProducts = allProductsData.data;
           }
@@ -121,7 +123,7 @@ const ProductDetails = () => {
       try {
         setReviewsLoading(true);
 
-        // Ensure the productId is properly encoded for the API call
+        // Ensure productId is properly encoded for API call
         const encodedProductId = encodeURIComponent(params.id);
         console.log("Fetching reviews for productId:", encodedProductId);
 
@@ -192,7 +194,7 @@ const ProductDetails = () => {
     );
   };
 
-  // Update the handleAddToCart function
+  // Update handleAddToCart function
   const handleAddToCart = async () => {
     setIsAddingToCart(true);
     try {
@@ -339,86 +341,86 @@ const ProductDetails = () => {
     setIsSubmittingReview(true);
 
     try {
-        // Prepare review data
-        const reviewData = {
-            productId: params.id,
-            name: reviewForm.name,
-            email: reviewForm.email,
-            rating: reviewForm.rating,
-            title: reviewForm.title,
-            comment: reviewForm.comment,
-            profileImage: reviewForm.profileImage, // Send to base64 image
-        };
+      // Prepare review data
+      const reviewData = {
+        productId: params.id,
+        name: reviewForm.name,
+        email: reviewForm.email,
+        rating: reviewForm.rating,
+        title: reviewForm.title,
+        comment: reviewForm.comment,
+        profileImage: reviewForm.profileImage, // Send to base64 image
+      };
 
-        // Submit review to API
-        const response = await fetch("/api/reviews", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(reviewData),
-        });
+      // Submit review to API
+      const response = await fetch("/api/reviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(reviewData),
+      });
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || "Failed to submit review");
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to submit review");
+      }
+
+      const result = await response.json();
+
+      // Add new review to list
+      const newReview = {
+        _id: result.data._id,
+        name: reviewForm.name,
+        profileImage: result.data.profileImage, // Use URL returned from ImgBB
+        rating: reviewForm.rating,
+        title: reviewForm.title,
+        comment: reviewForm.comment,
+        createdAt: new Date().toISOString(),
+        verified: false,
+      };
+
+      setReviews((prev) => [newReview, ...prev]);
+
+      // Update total pages
+      setTotalPages(Math.ceil((reviews.length + 1) / reviewsPerPage));
+
+      // Reset form
+      setReviewForm({
+        name: "",
+        email: "",
+        rating: 5,
+        title: "",
+        comment: "",
+        profileImage: null,
+        profileImagePreview: "/placeholder-avatar.png",
+      });
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = null;
+      }
+
+      showNotification("Thank you for your review!");
+
+      // Refresh product data to get updated rating
+      try {
+        const productResponse = await fetch(`/api/products/${params.id}`);
+        if (productResponse.ok) {
+          const productData = await productResponse.json();
+          if (productData.success) {
+            setProduct(productData.data);
+          }
         }
-
-        const result = await response.json();
-
-        // Add new review to the list
-        const newReview = {
-            _id: result.data._id,
-            name: reviewForm.name,
-            profileImage: result.data.profileImage, // Use the URL returned from ImgBB
-            rating: reviewForm.rating,
-            title: reviewForm.title,
-            comment: reviewForm.comment,
-            createdAt: new Date().toISOString(),
-            verified: false,
-        };
-
-        setReviews((prev) => [newReview, ...prev]);
-
-        // Update total pages
-        setTotalPages(Math.ceil((reviews.length + 1) / reviewsPerPage));
-
-        // Reset form
-        setReviewForm({
-            name: "",
-            email: "",
-            rating: 5,
-            title: "",
-            comment: "",
-            profileImage: null,
-            profileImagePreview: "/placeholder-avatar.png",
-        });
-
-        if (fileInputRef.current) {
-            fileInputRef.current.value = null;
-        }
-
-        showNotification("Thank you for your review!");
-        
-        // Refresh product data to get updated rating
-        try {
-            const productResponse = await fetch(`/api/products/${params.id}`);
-            if (productResponse.ok) {
-                const productData = await productResponse.json();
-                if (productData.success) {
-                    setProduct(productData.data);
-                }
-            }
-        } catch (err) {
-            console.error("Error refreshing product data:", err);
-        }
+      } catch (err) {
+        console.error("Error refreshing product data:", err);
+      }
     } catch (error) {
-        console.error("Error submitting review:", error);
-        showNotification("Failed to submit review. Please try again.");
+      console.error("Error submitting review:", error);
+      showNotification("Failed to submit review. Please try again.");
     } finally {
-        setIsSubmittingReview(false);
+      setIsSubmittingReview(false);
     }
-};
+  };
 
   // Pagination functions
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
@@ -682,7 +684,7 @@ const ProductDetails = () => {
                   >
                     <Minus className="h-4 w-4" />
                   </button>
-                  <span className="px-4 py-2 font-medium">{quantity}</span>
+                  <span className="px-3 py-2 font-medium">{quantity}</span>
                   <button
                     onClick={() => setQuantity(quantity + 1)}
                     className="p-2 hover:bg-gray-100 focus:outline-none"
@@ -712,17 +714,37 @@ const ProductDetails = () => {
               </div>
             </div>
 
-            {/* Product Features */}
-            {product.features && product.features.length > 0 && (
+            {/* Product Features - WITH SAFETY CHECK */}
+            {product.features && (
               <div>
                 <h3 className="text-lg font-semibold mb-2">Key Features</h3>
                 <ul className="space-y-2">
-                  {product.features.map((feature, index) => (
-                    <li key={index} className="flex items-start space-x-2">
+                  {/* 
+                    Handle different data types for features:
+                    1. If it's an array, map over it
+                    2. If it's a string, split by comma and map
+                    3. If it's an object with 'items', map over items
+                  */}
+                  {Array.isArray(product.features) ? (
+                    product.features.map((feature, index) => (
+                      <li key={index} className="flex items-start space-x-2">
+                        <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-gray-600">{feature}</span>
+                      </li>
+                    ))
+                  ) : typeof product.features === 'string' ? (
+                    product.features.split(',').map((feature, index) => (
+                      <li key={index} className="flex items-start space-x-2">
+                        <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-gray-600">{feature.trim()}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="flex items-start space-x-2">
                       <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-600">{feature}</span>
+                        <span className="text-gray-600">{product.features}</span>
                     </li>
-                  ))}
+                  )}
                 </ul>
               </div>
             )}
@@ -773,6 +795,14 @@ const ProductDetails = () => {
             </div>
           </div>
         </div>
+
+        {/* Debug Information - REMOVE IN PRODUCTION */}
+        {debugProduct && (
+          <div className="bg-yellow-100 p-4 mb-4 rounded">
+            <h3>Debug Product Data:</h3>
+            <pre className="text-xs overflow-auto">{debugProduct}</pre>
+          </div>
+        )}
 
         {/* Product Details Tabs */}
         <div className="mt-16">
@@ -906,7 +936,7 @@ const ProductDetails = () => {
                   Full Ingredient List
                 </h3>
                 <div className="prose max-w-none">
-                  {product.ingredients && product.ingredients.length > 0 ? (
+                  {product.ingredients && Array.isArray(product.ingredients) && product.ingredients.length > 0 ? (
                     <p className="text-gray-700">
                       {product.ingredients.join(", ")}
                     </p>

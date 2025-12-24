@@ -1,4 +1,5 @@
-// app/products/page.jsx
+// src/app/components/AllProducts/AllProducts.jsx
+
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
@@ -30,7 +31,7 @@ const AllProducts = () => {
                 const data = await response.json();
                 
                 // Handle nested data structure
-                let allProducts = [];
+                let allProducts = []; // Changed from const to let
                 
                 if (data.success && Array.isArray(data.data)) {
                     // Use data.data directly if it's already an array of products

@@ -19,6 +19,8 @@ export async function POST(request) {
         const productsCollection = await dbConnect('products');
         const products = await Promise.all(
             items.map(async (item) => {
+                // FIX: Query by the custom 'id' field, NOT the '_id' field.
+                // The 'productId' from the cart is a string, not a MongoDB ObjectId.
                 const product = await productsCollection.findOne({ id: item.productId });
                 return {
                     ...item,
@@ -45,13 +47,12 @@ export async function POST(request) {
         }
 
         // Calculate total price
-        let totalPrice = 0;
-        for (const item of products) {
-            const price = item.product.discount > 0 
-                ? item.product.finalPrice 
+        const totalPrice = products.reduce((total, item) => {
+            const price = item.product.discount && item.product.discount > 0 
+                ? item.product.finalPrice || item.product.price * (1 - item.product.discount)
                 : item.product.price;
-            totalPrice += price * item.quantity;
-        }
+            return total + (price * item.quantity);
+        }, 0);
 
         // Create order
         const order = {
@@ -59,14 +60,14 @@ export async function POST(request) {
             items: products.map(item => ({
                 productId: item.productId,
                 name: item.product.name,
-                price: item.product.discount > 0 
-                    ? item.product.finalPrice 
+                price: item.product.discount && item.product.discount > 0 
+                    ? item.product.finalPrice || item.product.price * (1 - item.product.discount)
                     : item.product.price,
                 quantity: item.quantity,
                 imageUrl: item.product.imageUrl
             })),
-            shippingAddress,
-            paymentMethod,
+            shippingAddress: shippingAddress || null,
+            paymentMethod: paymentMethod || null,
             totalPrice,
             status: 'processing',
             createdAt: new Date(),
@@ -79,12 +80,12 @@ export async function POST(request) {
         // Update product stock
         for (const item of products) {
             await productsCollection.updateOne(
-                { id: item.productId },
+                { _id: item.product._id }, // Use the actual MongoDB _id for the update
                 { $inc: { stock: -item.quantity } }
             );
         }
 
-        // Clear cart items for the ordered products
+        // Remove items from cart
         const cartCollection = await dbConnect('cart');
         const productIds = items.map(item => item.productId);
         await cartCollection.deleteMany({ 

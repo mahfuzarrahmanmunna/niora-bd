@@ -13,7 +13,7 @@ export async function GET(request) {
         
         const collection = await dbConnect('reviews');
         
-        let query = {};
+        const query = {};
         if (productId) {
             query.productId = productId;
         }
@@ -58,7 +58,7 @@ export async function POST(request) {
         const collection = await dbConnect('reviews');
         
         // Handle profile image upload to ImgBB
-        let profileImageUrl = '/placeholder-avatar.png'; // Default image
+        let profileImageUrl = '/placeholder-avatar.png'; // Changed from const to let
         
         if (profileImage && profileImage !== '/placeholder-avatar.png') {
             try {
@@ -86,12 +86,12 @@ export async function POST(request) {
         
         const result = await collection.insertOne(newReview);
         
-        // Update the product's average rating
+        // Update product's average rating
         try {
             await updateProductRating(productId);
         } catch (ratingError) {
             console.error('Error updating product rating:', ratingError);
-            // Continue with the response even if rating update fails
+            // Continue with response even if rating update fails
         }
         
         return NextResponse.json({

@@ -50,7 +50,7 @@ function SearchResults() {
         const category = product.category.toLowerCase();
         const description = product.description.toLowerCase();
 
-        let score = 0;
+        const score = 0;
 
         // Exact match in name gets highest score
         if (name === searchTerm) score += 100;

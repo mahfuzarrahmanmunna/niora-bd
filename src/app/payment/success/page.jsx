@@ -1,75 +1,66 @@
-import { NextResponse } from 'next/server';
-import { dbConnect } from '@/lib/dbConnect';
-import { ObjectId } from 'mongodb';
+// src/app/payment/success/page.jsx
+"use client";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Check, Home } from "lucide-react";
 
-export async function POST(request) {
-  try {
-    // Get the form data from the request
-    const formData = await request.formData();
-    const tran_id = formData.get('tran_id');
-    const val_id = formData.get('val_id'); // Validation ID
-    const amount = formData.get('amount');
-    const status = formData.get('status'); // Should be 'VALID' or 'VALIDATED'
+const PaymentSuccessPage = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const orderId = searchParams.get("orderId");
 
-    if (!tran_id || !status) {
-      // If we don't have the required data, just redirect to fail page
-      return NextResponse.redirect(new URL('/payment/fail', request.url));
-    }
-
-    // In a real application, you should validate the transaction using `val_id`
-    // by calling the SSLCommerz validation API. For simplicity, we're skipping it here.
-    // https://developer.sslcommerz.com/doc/v4/#validation-apis
-
-    if (status === 'VALID' || status === 'VALIDATED') {
-      const ordersCollection = await dbConnect('orders');
-      
-      // Find the order using the transaction ID we stored during initiation
-      const order = await ordersCollection.findOne({ sslcommerzTransactionId: tran_id });
-
-      if (order) {
-        // Update product stock
-        const productsCollection = await dbConnect('products');
-        for (const item of order.items) {
-          await productsCollection.updateOne(
-            { id: item.productId },
-            { $inc: { stock: -item.quantity } }
-          );
-        }
-
-        await ordersCollection.updateOne(
-          { _id: order._id },
-          { 
-            $set: { 
-              status: 'paid',
-              paymentDetails: {
-                gateway: 'SSLCommerz',
-                transactionId: tran_id,
-                validationId: val_id,
-                amount: amount,
-                paidAt: new Date(),
-              },
-              updatedAt: new Date()
-            }
+  useEffect(() => {
+    // In a real implementation, you would verify the payment with the payment gateway
+    // and update the order status in your database
+    if (orderId) {
+      // Update order status to "paid" or "processing"
+      fetch(`/api/orders/${orderId}/payment-success`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            console.log("Payment verified and order updated");
+          } else {
+            console.error("Failed to verify payment:", data.message);
           }
-        );
-        
-        // Clear the user's cart after successful payment
-        const userId = order.userId;
-        if (userId) {
-          const cartCollection = await dbConnect('cart');
-          await cartCollection.deleteMany({ userId });
-        }
-
-        // Redirect to the frontend success page
-        const successUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/payment/success?orderId=${order._id}`;
-        return NextResponse.redirect(successUrl);
-      }
+        })
+        .catch((err) => console.error("Error verifying payment:", err));
     }
-    
-    // If status is not valid or order not found, redirect to fail page
-    return NextResponse.redirect(new URL('/payment/fail', request.url));
-  } catch (error) {
-    console.error('SSLCommerz Success Callback Error:', error);
-    return NextResponse.redirect(new URL('/payment/fail', request.url));
-  }
-}
+  }, [orderId]);
+
+  return (
+    <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+      <div className="max-w-md mx-auto px-4 py-8 text-center">
+        <div className="bg-green-100 text-green-600 p-6 rounded-lg">
+          <Check className="h-12 w-12 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Payment Successful!</h1>
+          <p className="mb-4">
+            Your payment has been processed successfully. We'll send you a confirmation
+            email shortly.
+          </p>
+          <p className="text-sm">Order ID: {orderId}</p>
+        </div>
+        <div className="mt-6 space-y-3">
+          <button
+            onClick={() => router.push("/order-confirmation?orderId=" + orderId)}
+            className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            View Order Details
+          </button>
+          <button
+            onClick={() => router.push("/")}
+            className="w-full flex justify-center items-center px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+          >
+            <Home className="h-5 w-5 mr-2" />
+            Back to Home
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PaymentSuccessPage;

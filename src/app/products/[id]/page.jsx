@@ -80,7 +80,7 @@ const ProductDetails = () => {
                 if (allProductsResponse.ok) {
                     const allProductsData = await allProductsResponse.json();
                     
-                    let allProducts = [];
+                    const allProducts = [];
                     if (allProductsData.success && Array.isArray(allProductsData.data)) {
                         allProducts = allProductsData.data;
                     }

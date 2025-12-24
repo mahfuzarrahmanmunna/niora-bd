@@ -19,6 +19,7 @@ const TopNavbar = () => {
     const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
     const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [cartCount, setCartCount] = useState(0); // Added cart count state
 
     const pathname = usePathname();
     const router = useRouter();
@@ -28,20 +29,44 @@ const TopNavbar = () => {
     const profileDropdownRef = useRef(null);
     const debounceTimerRef = useRef(null);
 
+    // Fetch cart count when component mounts
+    useEffect(() => {
+        const fetchCartCount = async () => {
+            try {
+                // Get user ID from localStorage
+                const userId = localStorage.getItem("userId") || "guest-user-" + Date.now();
+                
+                const response = await fetch(`/api/cart?userId=${userId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.data) {
+                        // Calculate total items in cart
+                        const totalItems = data.data.reduce((total, item) => total + item.quantity, 0);
+                        setCartCount(totalItems);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching cart count:', error);
+            }
+        };
+        
+        fetchCartCount();
+    }, []);
+
     // Fetch all products when component mounts
     useEffect(() => {
         const fetchProducts = async () => {
             try {
                 setIsLoading(true);
-                const response = await fetch('/data.json');
+                const response = await fetch('/api/products');
                 if (!response.ok) {
                     throw new Error('Failed to fetch products');
                 }
                 const data = await response.json();
-                setAllProducts(data);
+                setAllProducts(data.data || []);
 
                 // Extract unique categories
-                const uniqueCategories = [...new Set(data.map(product => product.category))];
+                const uniqueCategories = [...new Set(data.data.map(product => product.category))];
                 setCategories(uniqueCategories);
 
                 setIsLoading(false);
@@ -139,7 +164,7 @@ const TopNavbar = () => {
         const value = e.target.value;
         setSearchQuery(value);
 
-        // Clear the existing timer
+        // Clear existing timer
         if (debounceTimerRef.current) {
             clearTimeout(debounceTimerRef.current);
         }
@@ -323,7 +348,7 @@ const TopNavbar = () => {
                                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                             </svg>
                                         ) : (
-                                            <svg className="w-4 h-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg className="w-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                             </svg>
                                         )}
@@ -511,14 +536,17 @@ const TopNavbar = () => {
                             )}
                         </div>
 
-                        {/* Shopping Cart Icon - Now linked to cart page */}
+                        {/* Shopping Cart Icon with Badge */}
                         <Link href="/manage-add-to-cart" className="p-2 rounded-full text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 relative transition-all duration-200">
                             <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                             </svg>
-                            <span className="absolute top-1 right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full">
-                                3
-                            </span>
+                            {/* Cart Badge */}
+                            {cartCount > 0 && (
+                                <span className="absolute top-1 right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full">
+                                    {cartCount > 99 ? '99+' : cartCount}
+                                </span>
+                            )}
                         </Link>
 
                         {/* Mobile menu button */}
@@ -564,7 +592,7 @@ const TopNavbar = () => {
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
                                     ) : (
-                                        <svg className="w-4 h-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg className="w-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                         </svg>
                                     )}
@@ -579,41 +607,41 @@ const TopNavbar = () => {
                                     {searchResults.map((product) => (
                                         <li key={product.id}>
                                             <Link
-                                                href={`/product/${product.id}`}
-                                                className="block px-4 py-3 hover:bg-gray-100 flex items-center"
-                                                onClick={handleSuggestionClick}
-                                            >
-                                                <div className="relative w-12 h-12 mr-3 flex-shrink-0">
-                                                    <Image
-                                                        src={`https://picsum.photos/seed/${product.id}/100/100.jpg`}
-                                                        alt={product.name}
-                                                        fill
-                                                        sizes="48px"
-                                                        className="object-cover rounded"
-                                                    />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-medium text-gray-900 truncate">{product.name}</p>
-                                                    <p className="text-xs text-gray-500">{product.brand}</p>
-                                                    <div className="flex items-center justify-between mt-1">
-                                                        <div className="flex items-center">
-                                                            {renderRating(product.rating)}
-                                                            <span className="ml-1 text-xs text-gray-600">({product.rating})</span>
-                                                        </div>
-                                                        <div>
-                                                            {product.discount > 0 ? (
-                                                                <>
-                                                                    <span className="text-sm font-bold text-gray-900">${product.finalPrice.toFixed(2)}</span>
-                                                                    <span className="text-xs text-gray-500 line-through ml-1">${product.price.toFixed(2)}</span>
-                                                                </>
-                                                            ) : (
-                                                                <span className="text-sm font-bold text-gray-900">${product.price.toFixed(2)}</span>
-                                                            )}
+                                                    href={`/product/${product.id}`}
+                                                    className="block px-4 py-3 hover:bg-gray-100 flex items-center"
+                                                    onClick={handleSuggestionClick}
+                                                >
+                                                    <div className="relative w-12 h-12 mr-3 flex-shrink-0">
+                                                        <Image
+                                                            src={`https://picsum.photos/seed/${product.id}/100/100.jpg`}
+                                                            alt={product.name}
+                                                            fill
+                                                            sizes="48px"
+                                                            className="object-cover rounded"
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium text-gray-900 truncate">{product.name}</p>
+                                                        <p className="text-xs text-gray-500">{product.brand}</p>
+                                                        <div className="flex items-center justify-between mt-1">
+                                                            <div className="flex items-center">
+                                                                {renderRating(product.rating)}
+                                                                <span className="ml-1 text-xs text-gray-600">({product.rating})</span>
+                                                            </div>
+                                                            <div>
+                                                                {product.discount > 0 ? (
+                                                                    <>
+                                                                        <span className="text-sm font-bold text-gray-900">${product.finalPrice.toFixed(2)}</span>
+                                                                        <span className="text-xs text-gray-500 line-through ml-1">${product.price.toFixed(2)}</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <span className="text-sm font-bold text-gray-900">${product.price.toFixed(2)}</span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </Link>
-                                        </li>
+                                                </Link>
+                                            </li>
                                     ))}
                                 </ul>
                                 <div className="px-4 py-2 border-t border-gray-100">
@@ -721,14 +749,6 @@ const TopNavbar = () => {
                                     >
                                         Wishlist
                                     </Link>
-                                    {session.user.role === 'admin' && (
-                                        <Link
-                                            href="/dashboard"
-                                            className="block px-3 py-2 text-base text-indigo-600 hover:bg-indigo-50 transition-colors duration-200"
-                                        >
-                                            Admin Dashboard
-                                        </Link>
-                                    )}
                                     <Link
                                         href="/manage-add-to-cart"
                                         className="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
