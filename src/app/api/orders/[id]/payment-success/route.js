@@ -1,4 +1,4 @@
-// src/app/api/orders/[orderId]/payment-success/route.js
+// src/app/api/manage-my-order/[orderId]/payment-success/route.js
 import { NextResponse } from 'next/server';
 import { dbConnect } from '@/lib/dbConnect';
 import { ObjectId } from 'mongodb';

@@ -30,9 +30,19 @@ export async function POST(request) {
     const store_passwd = process.env.SSLCOMMERZ_STORE_PASSWORD;
     const is_sandbox = process.env.SSLCOMMERZ_SANDBOX === 'true';
     
-    if (!store_id || !store_passwd) {
+    // More detailed error checking
+    if (!store_id || store_id === 'your_store_id') {
+      console.error('Invalid SSLCommerz store_id:', store_id);
       return NextResponse.json(
-        { success: false, message: 'Payment gateway configuration error' },
+        { success: false, message: 'Invalid SSLCommerz store ID. Please check your environment variables.' },
+        { status: 500 }
+      );
+    }
+    
+    if (!store_passwd || store_passwd === 'your_store_password') {
+      console.error('Invalid SSLCommerz store_passwd');
+      return NextResponse.json(
+        { success: false, message: 'Invalid SSLCommerz store password. Please check your environment variables.' },
         { status: 500 }
       );
     }
@@ -47,9 +57,9 @@ export async function POST(request) {
       total_amount: amount.toString(),
       currency: 'BDT',
       tran_id,
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/success`,
-      fail_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/fail`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/cancel`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/sslcommerz/success`,
+      fail_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/sslcommerz/fail`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/sslcommerz/cancel`,
       ipn_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/sslcommerz/ipn`,
       shipping_method: 'NO',
       product_name: 'Order Payment',
@@ -73,6 +83,9 @@ export async function POST(request) {
       ? 'https://sandbox.sslcommerz.com/gwprocess/v4/api.php' 
       : 'https://securepay.sslcommerz.com/gwprocess/v4/api.php';
 
+    console.log('Making SSLCommerz request to:', sslczUrl);
+    console.log('With store_id:', store_id);
+
     const response = await fetch(sslczUrl, {
       method: 'POST',
       headers: {
@@ -81,7 +94,19 @@ export async function POST(request) {
       body: new URLSearchParams(paymentData).toString(),
     });
 
-    const data = await response.json();
+    const responseText = await response.text();
+    console.log('SSLCommerz response:', responseText);
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse SSLCommerz response:', parseError);
+      return NextResponse.json(
+        { success: false, message: 'Invalid response from payment gateway' },
+        { status: 500 }
+      );
+    }
 
     if (data.status === 'SUCCESS') {
       // Update the order with transaction ID
@@ -89,6 +114,7 @@ export async function POST(request) {
         { _id: new ObjectId(orderId) },
         { 
           $set: { 
+            sslcommerzTransactionId: tran_id, // Add this field for tracking
             paymentInfo: {
               tran_id,
               amount,
@@ -114,8 +140,15 @@ export async function POST(request) {
         tran_id
       });
     } else {
+      // Provide more specific error messages based on SSLCommerz error codes
+      let errorMessage = data.failedreason || 'Payment initialization failed';
+      
+      if (errorMessage.includes('Store Credential Error') || errorMessage.includes('Store is De-active')) {
+        errorMessage = 'SSLCommerz store credentials are invalid or the store is inactive. Please check your SSLCommerz account or use a different payment method.';
+      }
+      
       return NextResponse.json(
-        { success: false, message: data.failedreason || 'Payment initialization failed' },
+        { success: false, message: errorMessage },
         { status: 400 }
       );
     }

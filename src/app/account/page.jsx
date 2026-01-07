@@ -43,7 +43,7 @@ const MyAccountPage = () => {
                     <div className="space-y-4">
                         <h2 className="text-xl font-semibold text-gray-900">Shopping</h2>
 
-                        <a href="/account/orders" className="block p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <a href="/account/manage-my-order" className="block p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                             <h3 className="font-medium text-gray-900">Order History</h3>
                             <p className="text-sm text-gray-600 mt-1">View your past orders and track current ones</p>
                         </a>

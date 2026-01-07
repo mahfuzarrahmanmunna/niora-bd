@@ -54,8 +54,8 @@ const ProfileSidebar = ({ user, onLogout, currentPath }) => {
                 </Link>
 
                 <Link
-                    href="/account/orders"
-                    className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${isActive('/account/orders')
+                    href="/account/manage-my-order"
+                    className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${isActive('/account/manage-my-order')
                             ? 'bg-blue-600 text-white'
                             : 'text-gray-600 hover:bg-gray-100'
                         }`}

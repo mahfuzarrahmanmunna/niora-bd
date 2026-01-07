@@ -1,30 +1,21 @@
-// src/app/api/sslcommerz/success/route.js
+// src/app/api/nagad/callback/route.js
 import { NextResponse } from 'next/server';
 import { dbConnect } from '@/lib/dbConnect';
 import { ObjectId } from 'mongodb';
 
 export async function POST(request) {
   try {
-    const data = await request.formData();
-    const tran_id = data.get('tran_id');
-    const val_id = data.get('val_id'); // Validation ID
-    const amount = data.get('amount');
-    const status = data.get('status'); // Should be 'VALID' or 'VALIDATED'
-
-    if (!tran_id || !status) {
-      // If we don't have the required data, just redirect to fail page
+    const { paymentRefId, order_id, status, amount } = await request.json();
+    
+    if (!paymentRefId || !status) {
       return NextResponse.redirect(new URL('/payment/fail', request.url));
     }
 
-    // In a real application, you should validate the transaction using `val_id`
-    // by calling the SSLCommerz validation API. For simplicity, we're skipping it here.
-    // https://developer.sslcommerz.com/doc/v4/#validation-apis
-
-    if (status === 'VALID' || status === 'VALIDATED') {
+    if (status === 'Success') {
       const ordersCollection = await dbConnect('orders');
       
-      // Find the order using the transaction ID we stored during initiation
-      const order = await ordersCollection.findOne({ sslcommerzTransactionId: tran_id });
+      // Find the order using the payment reference ID we stored during initiation
+      const order = await ordersCollection.findOne({ nagadTransactionId: paymentRefId });
 
       if (order) {
         // Update product stock
@@ -42,9 +33,9 @@ export async function POST(request) {
             $set: { 
               status: 'paid',
               paymentDetails: {
-                gateway: 'SSLCommerz',
-                transactionId: tran_id,
-                validationId: val_id,
+                gateway: 'Nagad',
+                paymentRefId: paymentRefId,
+                orderId: order_id,
                 amount: amount,
                 paidAt: new Date(),
               },
@@ -66,10 +57,10 @@ export async function POST(request) {
       }
     }
     
-    // If status is not valid or order not found, redirect to fail page
+    // If status is not success or order not found, redirect to fail page
     return NextResponse.redirect(new URL('/payment/fail', request.url));
   } catch (error) {
-    console.error('SSLCommerz Success Callback Error:', error);
+    console.error('Nagad Callback Error:', error);
     return NextResponse.redirect(new URL('/payment/fail', request.url));
   }
 }

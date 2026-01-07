@@ -63,6 +63,7 @@ const ProductDetails = () => {
   const reviewsPerPage = 6;
 
   const params = useParams();
+  
 
   useEffect(() => {
     const fetchProductData = async () => {
@@ -83,6 +84,14 @@ const ProductDetails = () => {
         }
 
         const foundProduct = productData.data;
+
+        // Ensure the product has both id and _id fields
+        if (foundProduct._id && !foundProduct.id) {
+          foundProduct.id = foundProduct._id.toString();
+        } else if (foundProduct.id && !foundProduct._id) {
+          foundProduct._id = foundProduct.id;
+        }
+
         setProduct(foundProduct);
         setDebugProduct(JSON.stringify(foundProduct, null, 2)); // Debug info
 
@@ -238,8 +247,13 @@ const ProductDetails = () => {
         localStorage.getItem("userId") || "guest-user-" + Date.now();
       localStorage.setItem("userId", userId);
 
-      // Create a simple checkout with just this product
-      const response = await fetch("/api/checkout", {
+      // Debug: Log the product data
+      console.log("Product data:", product);
+      console.log("Product ID:", product.id);
+      console.log("Product _id:", product._id);
+
+      // Create an order first instead of directly processing checkout
+      const response = await fetch("/api/manage-my-order", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -248,35 +262,65 @@ const ProductDetails = () => {
           userId,
           items: [
             {
-              productId: product.id,
+              // Use _id if available, otherwise fall back to id
+              productId: product._id || product.id,
               quantity,
+              price: product.finalPrice || product.price,
             },
           ],
-          shippingAddress: {
-            // Default address - in a real app, you'd get this from user profile
-            name: "Guest User",
-            address: "123 Main St",
-            city: "Anytown",
-            state: "CA",
-            zipCode: "12345",
-            country: "USA",
-          },
-          paymentMethod: "credit-card", // Default payment method
         }),
       });
 
-      const data = await response.json();
+      console.log("Response status:", response.status);
+      console.log("Response headers:", response.headers);
 
+      // Check if response is ok and has content
       if (!response.ok) {
-        throw new Error(data.message || "Failed to process order");
+        // Try to get error message from response
+        let errorMessage = `Failed to create order (${response.status})`;
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } else {
+            const errorText = await response.text();
+            errorMessage = errorText || errorMessage;
+          }
+        } catch (e) {
+          // If we can't parse the response, use status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
-      showNotification("Order placed successfully!");
-      // Redirect to order confirmation page
-      router.push(`/order-confirmation?orderId=${data.orderId}`);
+      // Check if response has content before parsing JSON
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Invalid response from server");
+      }
+
+      // Now parse JSON
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error("Error parsing JSON:", parseError);
+        throw new Error("Invalid response format from server");
+      }
+
+      console.log("Order created successfully:", data);
+
+      // Check if data is valid
+      if (!data || !data.success || !data.data || !data.data._id) {
+        throw new Error("Invalid order data received");
+      }
+
+      // Redirect to payment page with the order ID
+      router.push(`/payment?orderId=${data.data._id}`);
     } catch (error) {
-      console.error("Error processing order:", error);
-      showNotification(error.message || "Failed to process order");
+      console.error("Error creating order:", error);
+      showNotification(error.message || "Failed to create order");
     } finally {
       setIsBuyingNow(false);
     }
@@ -732,8 +776,8 @@ const ProductDetails = () => {
                         <span className="text-gray-600">{feature}</span>
                       </li>
                     ))
-                  ) : typeof product.features === 'string' ? (
-                    product.features.split(',').map((feature, index) => (
+                  ) : typeof product.features === "string" ? (
+                    product.features.split(",").map((feature, index) => (
                       <li key={index} className="flex items-start space-x-2">
                         <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
                         <span className="text-gray-600">{feature.trim()}</span>
@@ -742,7 +786,7 @@ const ProductDetails = () => {
                   ) : (
                     <li className="flex items-start space-x-2">
                       <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span className="text-gray-600">{product.features}</span>
+                      <span className="text-gray-600">{product.features}</span>
                     </li>
                   )}
                 </ul>
@@ -936,7 +980,9 @@ const ProductDetails = () => {
                   Full Ingredient List
                 </h3>
                 <div className="prose max-w-none">
-                  {product.ingredients && Array.isArray(product.ingredients) && product.ingredients.length > 0 ? (
+                  {product.ingredients &&
+                  Array.isArray(product.ingredients) &&
+                  product.ingredients.length > 0 ? (
                     <p className="text-gray-700">
                       {product.ingredients.join(", ")}
                     </p>

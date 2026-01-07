@@ -23,7 +23,7 @@ const OrderConfirmationPage = () => {
                 setIsLoading(true);
                 setError(null);
                 
-                const response = await fetch(`/api/orders/${orderId}`);
+                const response = await fetch(`/api/manage-my-order/${orderId}`);
                 
                 if (!response.ok) {
                     const contentType = response.headers.get('content-type');

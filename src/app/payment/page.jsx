@@ -2,14 +2,14 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CreditCard, Loader, ArrowLeft, Truck, Smartphone, Send } from "lucide-react";
+import { CreditCard, Loader, ArrowLeft, Truck, Smartphone, Send, AlertCircle } from "lucide-react";
 
 const PaymentPage = () => {
   const [order, setOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState("sslcommerz"); // Default to SSLCommerz
+  const [paymentMethod, setPaymentMethod] = useState("cod"); // Default to COD
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
@@ -34,7 +34,7 @@ const PaymentPage = () => {
         setIsLoading(true);
         setError(null);
 
-        const response = await fetch(`/api/orders/${orderId}`);
+        const response = await fetch(`/api/manage-my-order/${orderId}`);
 
         if (!response.ok) {
           const contentType = response.headers.get("content-type");
@@ -118,7 +118,7 @@ const PaymentPage = () => {
           };
           break;
         case "cod":
-          apiEndpoint = "/api/orders/cod";
+          apiEndpoint = "/api/manage-my-order/cod";
           requestBody = {
             orderId: order._id,
             customerInfo,
@@ -158,7 +158,14 @@ const PaymentPage = () => {
           window.location.href = data.paymentUrl;
         }
       } else {
-        throw new Error(data.message || "Payment initiation failed.");
+        // Improved error handling for payment gateway specific errors
+        let errorMessage = data.message || "Payment initiation failed.";
+        
+        if (errorMessage.includes("Store Credential Error") || errorMessage.includes("Store is De-active")) {
+          errorMessage = "Payment gateway credentials are invalid. Please use Cash on Delivery or contact support.";
+        }
+        
+        throw new Error(errorMessage);
       }
     } catch (err) {
       console.error("Error processing payment:", err);
@@ -226,6 +233,35 @@ const PaymentPage = () => {
             </p>
           </div>
 
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <AlertCircle className="h-5 w-5 text-red-400" aria-hidden="true" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">
+                    Payment Error
+                  </h3>
+                  <div className="mt-2 text-sm text-red-700">
+                    <p>{error}</p>
+                  </div>
+                  <div className="mt-4">
+                    <div className="-mx-2 -my-1.5 flex">
+                      <button
+                        type="button"
+                        className="ml-3 bg-red-50 px-3 py-1.5 rounded-md text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600"
+                        onClick={() => setError(null)}
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handlePayment} className="space-y-6">
             {/* Payment Method Selection */}
             <div>
@@ -233,6 +269,23 @@ const PaymentPage = () => {
                 Payment Method
               </h3>
               <div className="space-y-3">
+                <label className="flex items-center p-4 border rounded-md cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="cod"
+                    checked={paymentMethod === "cod"}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="mr-3"
+                  />
+                  <Truck className="h-5 w-5 mr-2 text-green-600" />
+                  <div>
+                    <p className="font-medium">Cash on Delivery</p>
+                    <p className="text-sm text-gray-500">
+                      Pay when you receive your order
+                    </p>
+                  </div>
+                </label>
                 <label className="flex items-center p-4 border rounded-md cursor-pointer hover:bg-gray-50">
                   <input
                     type="radio"
@@ -298,23 +351,6 @@ const PaymentPage = () => {
                     <p className="font-medium">Nagad</p>
                     <p className="text-sm text-gray-500">
                       Mobile banking payment
-                    </p>
-                  </div>
-                </label>
-                <label className="flex items-center p-4 border rounded-md cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="cod"
-                    checked={paymentMethod === "cod"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="mr-3"
-                  />
-                  <Truck className="h-5 w-5 mr-2 text-green-600" />
-                  <div>
-                    <p className="font-medium">Cash on Delivery</p>
-                    <p className="text-sm text-gray-500">
-                      Pay when you receive your order
                     </p>
                   </div>
                 </label>
@@ -428,8 +464,6 @@ const PaymentPage = () => {
                 />
               </div>
             </div>
-
-            {error && <p className="text-red-500">{error}</p>}
 
             <button
               type="submit"

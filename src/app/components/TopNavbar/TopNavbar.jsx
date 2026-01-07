@@ -472,7 +472,7 @@ const TopNavbar = () => {
                                                     My Profile
                                                 </Link>
                                                 <Link
-                                                    href="/orders"
+                                                    href="/manage-my-order"
                                                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                                                     onClick={() => setIsProfileDropdownOpen(false)}
                                                 >
@@ -738,7 +738,7 @@ const TopNavbar = () => {
                                         My Profile
                                     </Link>
                                     <Link
-                                        href="/orders"
+                                        href="/manage-my-order"
                                         className="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
                                     >
                                         My Orders

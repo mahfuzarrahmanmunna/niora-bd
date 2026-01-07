@@ -14,7 +14,7 @@ const PaymentSuccessPage = () => {
     // and update the order status in your database
     if (orderId) {
       // Update order status to "paid" or "processing"
-      fetch(`/api/orders/${orderId}/payment-success`, {
+      fetch(`/api/manage-my-order/${orderId}/payment-success`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId }),

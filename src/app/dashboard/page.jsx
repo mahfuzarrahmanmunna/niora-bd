@@ -192,7 +192,7 @@ const DashboardPage = () => {
                     </div>
                     <div className="bg-gray-50 px-5 py-3">
                         <div className="text-sm">
-                            <Link href="/dashboard/orders" className="font-medium text-blue-700 hover:text-blue-600">
+                            <Link href="/dashboard/manage-my-order" className="font-medium text-blue-700 hover:text-blue-600">
                                 View all orders
                             </Link>
                         </div>
@@ -299,7 +299,7 @@ const DashboardPage = () => {
                                 {dashboardData.recentOrders.map((order) => (
                                     <tr key={order.id}>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            <Link href={`/dashboard/orders/${order.id}`} className="text-blue-600 hover:text-blue-500">
+                                            <Link href={`/dashboard/manage-my-order/${order.id}`} className="text-blue-600 hover:text-blue-500">
                                                 {order.id}
                                             </Link>
                                         </td>
@@ -324,7 +324,7 @@ const DashboardPage = () => {
                     </div>
                     <div className="bg-gray-50 px-4 py-3 sm:px-6">
                         <div className="text-sm">
-                            <Link href="/dashboard/orders" className="font-medium text-blue-700 hover:text-blue-600">
+                            <Link href="/dashboard/manage-my-order" className="font-medium text-blue-700 hover:text-blue-600">
                                 View all orders
                             </Link>
                         </div>

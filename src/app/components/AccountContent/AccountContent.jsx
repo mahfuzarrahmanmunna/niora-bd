@@ -15,7 +15,7 @@ const AccountContent = ({ user, isLoading, message, setMessage, setIsLoading, se
         const path = window.location.pathname;
         if (path.includes('/account/profile')) setActiveTab('profile');
         else if (path.includes('/account/security')) setActiveTab('security');
-        else if (path.includes('/account/orders')) setActiveTab('orders');
+        else if (path.includes('/account/manage-my-order')) setActiveTab('orders');
         else if (path.includes('/account/addresses')) setActiveTab('addresses');
         else if (path.includes('/account/wishlist')) setActiveTab('wishlist');
     }, []);

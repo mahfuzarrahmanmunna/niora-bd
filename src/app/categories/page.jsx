@@ -19,7 +19,7 @@ const Categories = () => {
                 
                 if (data.success) {
                     // Handle the nested data structure
-                    const products = [];
+                    let products = []; // Changed from const to let
                     
                     if (Array.isArray(data.data)) {
                         if (data.data.length > 0 && data.data[0].data && Array.isArray(data.data[0].data)) {
