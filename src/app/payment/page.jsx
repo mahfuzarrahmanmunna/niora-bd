@@ -25,38 +25,67 @@ const PaymentPage = () => {
 
   useEffect(() => {
     if (!orderId) {
+      console.log('No orderId found, redirecting to cart');
       router.push("/cart");
       return;
     }
+
+    console.log('=== DEBUG: Payment Page ===');
+    console.log('Order ID from URL:', orderId);
+    console.log('Order ID type:', typeof orderId);
 
     const fetchOrder = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
+        console.log('Fetching order from API...');
         const response = await fetch(`/api/manage-my-order/${orderId}`);
+        
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+        // Check if response is HTML (likely a 404 page)
+        const contentType = response.headers.get("content-type");
+        console.log('Content-Type:', contentType);
+        
+        if (contentType && contentType.includes("text/html")) {
+          console.log('Received HTML response, likely a 404 page');
+          throw new Error("Order not found");
+        }
 
         if (!response.ok) {
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("text/html")) {
-            throw new Error("Order not found");
-          } else {
-            const errorData = await response.json();
-            throw new Error(
-              errorData.message ||
-                `Failed to fetch order with status ${response.status}`
-            );
+          console.log('Response not OK, trying to parse error...');
+          const errorText = await response.text();
+          console.log('Error response text:', errorText);
+          
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch (e) {
+            console.log('Could not parse error as JSON');
           }
+          
+          throw new Error(
+            errorData?.message ||
+              `Failed to fetch order with status ${response.status}`
+          );
         }
 
         const data = await response.json();
+        console.log('Order data received:', data);
+        
         if (data.success) {
+          console.log('Order found, setting state');
           setOrder(data.data);
         } else {
+          console.log('API returned success: false');
           throw new Error(data.message || "Failed to fetch order details.");
         }
       } catch (err) {
-        console.error("Error fetching order:", err);
+        console.error('=== ERROR IN FETCH ORDER ===');
+        console.error('Error message:', err.message);
+        console.error('Error stack:', err.stack);
         setError(
           err.message ||
             "An unexpected error occurred while fetching your order. Please try again."
@@ -193,6 +222,7 @@ const PaymentPage = () => {
           <div className="bg-red-100 text-red-600 p-6 rounded-lg">
             <h2 className="text-lg font-semibold mb-2">Error</h2>
             <p>{error}</p>
+            <p className="text-sm mt-2">Order ID: {orderId}</p>
           </div>
           <button
             onClick={() => router.push("/cart")}

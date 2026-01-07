@@ -1,75 +1,90 @@
-// src/app/api/sslcommerz/success/route.js
+// app/api/sslcommerz/success/route.js
 import { NextResponse } from 'next/server';
 import { dbConnect } from '@/lib/dbConnect';
 import { ObjectId } from 'mongodb';
 
 export async function POST(request) {
   try {
-    const data = await request.formData();
-    const tran_id = data.get('tran_id');
-    const val_id = data.get('val_id'); // Validation ID
-    const amount = data.get('amount');
-    const status = data.get('status'); // Should be 'VALID' or 'VALIDATED'
-
-    if (!tran_id || !status) {
-      // If we don't have the required data, just redirect to fail page
-      return NextResponse.redirect(new URL('/payment/fail', request.url));
+    const formData = await request.formData();
+    const tran_id = formData.get('tran_id');
+    const value_a = formData.get('value_a'); // This contains the order ID
+    
+    if (!tran_id || !value_a) {
+      return NextResponse.redirect(new URL('/payment/failure', request.url));
     }
-
-    // In a real application, you should validate the transaction using `val_id`
-    // by calling the SSLCommerz validation API. For simplicity, we're skipping it here.
-    // https://developer.sslcommerz.com/doc/v4/#validation-apis
-
-    if (status === 'VALID' || status === 'VALIDATED') {
+    
+    // Verify the transaction with SSLCommerz
+    const store_id = process.env.SSLCOMMERZ_STORE_ID;
+    const store_passwd = process.env.SSLCOMMERZ_STORE_PASSWORD;
+    const is_sandbox = process.env.SSLCOMMERZ_SANDBOX === 'true';
+    
+    const validationUrl = is_sandbox 
+      ? 'https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php' 
+      : 'https://securepay.sslcommerz.com/validator/api/validationserverAPI.php';
+    
+    const validationParams = new URLSearchParams({
+      store_id,
+      store_passwd,
+      val_id: tran_id,
+      format: 'json'
+    });
+    
+    const validationResponse = await fetch(validationUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: validationParams.toString(),
+    });
+    
+    const validationData = await validationResponse.json();
+    
+    if (validationData.status === 'VALID' || validationData.status === 'VALIDATED') {
+      // Update the order status to paid
       const ordersCollection = await dbConnect('orders');
       
-      // Find the order using the transaction ID we stored during initiation
-      const order = await ordersCollection.findOne({ sslcommerzTransactionId: tran_id });
-
-      if (order) {
-        // Update product stock
-        const productsCollection = await dbConnect('products');
-        for (const item of order.items) {
-          await productsCollection.updateOne(
-            { id: item.productId },
-            { $inc: { stock: -item.quantity } }
-          );
+      let order;
+      try {
+        // Try to find by ObjectId first
+        if (ObjectId.isValid(value_a)) {
+          order = await ordersCollection.findOne({ _id: new ObjectId(value_a) });
         }
-
+        
+        // If not found, try to find by string ID field
+        if (!order) {
+          order = await ordersCollection.findOne({ id: value_a });
+        }
+      } catch (error) {
+        console.error('Error finding order:', error);
+      }
+      
+      if (order) {
         await ordersCollection.updateOne(
           { _id: order._id },
           { 
             $set: { 
               status: 'paid',
-              paymentDetails: {
-                gateway: 'SSLCommerz',
-                transactionId: tran_id,
-                validationId: val_id,
-                amount: amount,
+              paymentStatus: 'completed',
+              paymentInfo: {
+                tran_id,
+                status: 'COMPLETED',
                 paidAt: new Date(),
+                validationData
               },
               updatedAt: new Date()
             }
           }
         );
-        
-        // Clear the user's cart after successful payment
-        const userId = order.userId;
-        if (userId) {
-          const cartCollection = await dbConnect('cart');
-          await cartCollection.deleteMany({ userId });
-        }
-
-        // Redirect to the frontend success page
-        const successUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/payment/success?orderId=${order._id}`;
-        return NextResponse.redirect(successUrl);
       }
+      
+      // Redirect to success page
+      return NextResponse.redirect(new URL(`/payment/success?orderId=${value_a}`, request.url));
+    } else {
+      // Transaction validation failed
+      return NextResponse.redirect(new URL('/payment/failure', request.url));
     }
-    
-    // If status is not valid or order not found, redirect to fail page
-    return NextResponse.redirect(new URL('/payment/fail', request.url));
   } catch (error) {
-    console.error('SSLCommerz Success Callback Error:', error);
-    return NextResponse.redirect(new URL('/payment/fail', request.url));
+    console.error('Error processing SSLCommerz success callback:', error);
+    return NextResponse.redirect(new URL('/payment/failure', request.url));
   }
 }

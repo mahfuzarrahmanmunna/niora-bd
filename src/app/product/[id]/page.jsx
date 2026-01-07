@@ -28,7 +28,7 @@ import {
 
 const ProductDetails = () => {
   const [product, setProduct] = useState(null);
-  const [debugProduct, setDebugProduct] = useState(null); // Debug state
+  // const [debugProduct, setDebugProduct] = useState(null); // Debug state
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -63,7 +63,6 @@ const ProductDetails = () => {
   const reviewsPerPage = 6;
 
   const params = useParams();
-  
 
   useEffect(() => {
     const fetchProductData = async () => {
@@ -93,7 +92,7 @@ const ProductDetails = () => {
         }
 
         setProduct(foundProduct);
-        setDebugProduct(JSON.stringify(foundProduct, null, 2)); // Debug info
+        // setDebugProduct(JSON.stringify(foundProduct, null, 2)); // Debug info
 
         // Fetch all products to find related ones
         const allProductsResponse = await fetch("/api/products");
@@ -252,6 +251,12 @@ const ProductDetails = () => {
       console.log("Product ID:", product.id);
       console.log("Product _id:", product._id);
 
+      // Make sure we have a valid product ID
+      const productId = product._id || product.id;
+      if (!productId) {
+        throw new Error("Invalid product ID");
+      }
+
       // Create an order first instead of directly processing checkout
       const response = await fetch("/api/manage-my-order", {
         method: "POST",
@@ -262,8 +267,7 @@ const ProductDetails = () => {
           userId,
           items: [
             {
-              // Use _id if available, otherwise fall back to id
-              productId: product._id || product.id,
+              productId: productId, // Make sure this is a string
               quantity,
               price: product.finalPrice || product.price,
             },
@@ -841,12 +845,12 @@ const ProductDetails = () => {
         </div>
 
         {/* Debug Information - REMOVE IN PRODUCTION */}
-        {debugProduct && (
+        {/* {debugProduct && (
           <div className="bg-yellow-100 p-4 mb-4 rounded">
             <h3>Debug Product Data:</h3>
             <pre className="text-xs overflow-auto">{debugProduct}</pre>
           </div>
-        )}
+        )} */}
 
         {/* Product Details Tabs */}
         <div className="mt-16">

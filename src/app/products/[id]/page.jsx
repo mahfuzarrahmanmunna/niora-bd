@@ -1,4 +1,3 @@
-// app/product/[id]/page.jsx
 "use client";
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
@@ -80,7 +79,8 @@ const ProductDetails = () => {
                 if (allProductsResponse.ok) {
                     const allProductsData = await allProductsResponse.json();
                     
-                    const allProducts = [];
+                    // Fixed: Changed const to let
+                    let allProducts = [];
                     if (allProductsData.success && Array.isArray(allProductsData.data)) {
                         allProducts = allProductsData.data;
                     }

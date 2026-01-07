@@ -1,4 +1,3 @@
-// app/search/page.jsx
 'use client';
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -50,7 +49,8 @@ function SearchResults() {
         const category = product.category.toLowerCase();
         const description = product.description.toLowerCase();
 
-        const score = 0;
+        // Fixed: Changed const to let
+        let score = 0;
 
         // Exact match in name gets highest score
         if (name === searchTerm) score += 100;

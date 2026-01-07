@@ -12,7 +12,7 @@ export async function GET(request, { params }) {
         const collection = await dbConnect('products');
 
         // Find the product by ID
-        const product;
+        let product; // Changed from const to let
 
         // Check if ID is a valid MongoDB ObjectId
         if (ObjectId.isValid(id)) {
@@ -99,7 +99,7 @@ export async function PUT(request, { params }) {
         }
 
         // Update the product
-        const result;
+        let result; // Changed from const to let
 
         // Check if the ID is a valid MongoDB ObjectId
         if (ObjectId.isValid(id)) {
@@ -144,7 +144,7 @@ export async function DELETE(request, { params }) {
         const collection = await dbConnect('products');
 
         // Delete the product
-        const result;
+        let result; // Changed from const to let
 
         // Check if the ID is a valid MongoDB ObjectId
         if (ObjectId.isValid(id)) {
