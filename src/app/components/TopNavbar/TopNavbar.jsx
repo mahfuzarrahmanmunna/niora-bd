@@ -30,12 +30,14 @@ const TopNavbar = () => {
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [cartCount, setCartCount] = useState(0); // Added cart count state
+  const [cartCount, setCartCount] = useState(0);
+  const [isMobileSearchFocused, setIsMobileSearchFocused] = useState(false);
 
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchContainerRef = useRef(null);
+  const mobileSearchContainerRef = useRef(null);
   const categoryDropdownRef = useRef(null);
   const profileDropdownRef = useRef(null);
   const debounceTimerRef = useRef(null);
@@ -138,6 +140,12 @@ const TopNavbar = () => {
         setShowSuggestions(false);
       }
       if (
+        mobileSearchContainerRef.current &&
+        !mobileSearchContainerRef.current.contains(event.target)
+      ) {
+        setIsMobileSearchFocused(false);
+      }
+      if (
         categoryDropdownRef.current &&
         !categoryDropdownRef.current.contains(event.target)
       ) {
@@ -221,11 +229,14 @@ const TopNavbar = () => {
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
       setShowSuggestions(false);
+      setIsMobileSearchFocused(false);
+      setIsMobileMenuOpen(false);
     }
   };
 
   const handleSuggestionClick = () => {
     setShowSuggestions(false);
+    setIsMobileSearchFocused(false);
   };
 
   const toggleMobileMenu = () => {
@@ -233,8 +244,9 @@ const TopNavbar = () => {
   };
 
   const handleCategoryClick = (category) => {
-    router.push(`/category/${encodeURIComponent(category)}`);
+    router.push(`/products?category=${encodeURIComponent(category)}`);
     setIsCategoryDropdownOpen(false);
+    setIsMobileMenuOpen(false);
   };
 
   const handleSignOut = async () => {
@@ -268,7 +280,7 @@ const TopNavbar = () => {
     { href: "/all-products", label: "All Products" },
     { href: "/deals", label: "Deals" },
     { href: "/about-us", label: "About" },
-    { href: "/manage-add-to-cart", label: "Cart" }, // Added cart link
+    { href: "/manage-add-to-cart", label: "Cart" },
   ];
 
   // Popular categories to show first
@@ -279,129 +291,414 @@ const TopNavbar = () => {
   ];
 
   return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? "bg-white shadow-lg" : "bg-white shadow-sm"}`}
-    >
-      <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo / Brand Name */}
-          <div className="flex-shrink-0">
-            <Link href="/" className="flex items-center">
-              <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                YourBrand
-              </span>
-            </Link>
-          </div>
-
-          {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex space-x-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
-                  pathname === link.href
-                    ? "text-indigo-600 bg-indigo-50"
-                    : "text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
-                }`}
-              >
-                {link.label}
+    <>
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? "bg-white shadow-lg" : "bg-white shadow-sm"}`}
+      >
+        <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo / Brand Name */}
+            <div className="flex-shrink-0">
+              <Link href="/" className="flex items-center">
+                <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                  YourBrand
+                </span>
               </Link>
-            ))}
-
-            {/* Categories Dropdown */}
-            <div className="relative" ref={categoryDropdownRef}>
-              <button
-                onClick={() =>
-                  setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
-                }
-                className={`px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 flex items-center ${
-                  pathname.startsWith("/category")
-                    ? "text-indigo-600 bg-indigo-50"
-                    : "text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
-                }`}
-              >
-                Categories
-                <FaChevronDown
-                  className={`ml-1 h-4 w-4 transition-transform duration-200 ${isCategoryDropdownOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              {/* Category Dropdown Menu */}
-              {isCategoryDropdownOpen && (
-                <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-                  <div className="py-2">
-                    {sortedCategories.map((category) => (
-                      <button
-                        key={category}
-                        onClick={() => handleCategoryClick(category)}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors duration-200"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span>{category}</span>
-                          <span className="text-xs text-gray-400">
-                            {
-                              allProducts.filter((p) => p.category === category)
-                                .length
-                            }{" "}
-                            items
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="px-4 py-2 border-t border-gray-100">
-                    <Link
-                      href="/categories"
-                      className="block text-center text-sm text-indigo-600 hover:text-indigo-700 font-medium"
-                    >
-                      View All Categories
-                    </Link>
-                  </div>
-                </div>
-              )}
             </div>
-          </nav>
 
-          {/* Right-side Actions (Search, Profile, Cart) */}
-          <div className="flex items-center space-x-2">
-            {/* Search Bar (Desktop) */}
-            <div className="hidden md:block" ref={searchContainerRef}>
-              <form onSubmit={handleSearch}>
+            {/* Desktop Navigation Links */}
+            <nav className="hidden md:flex space-x-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                    pathname === link.href
+                      ? "text-indigo-600 bg-indigo-50"
+                      : "text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+
+              {/* Categories Dropdown */}
+              <div className="relative" ref={categoryDropdownRef}>
+                <button
+                  onClick={() =>
+                    setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
+                  }
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 flex items-center ${
+                    pathname.startsWith("/category")
+                      ? "text-indigo-600 bg-indigo-50"
+                      : "text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
+                  }`}
+                >
+                  Categories
+                  <FaChevronDown
+                    className={`ml-1 h-4 w-4 transition-transform duration-200 ${isCategoryDropdownOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {/* Category Dropdown Menu */}
+                {isCategoryDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                    <div className="py-2">
+                      {sortedCategories.map((category) => (
+                        <button
+                          key={category}
+                          onClick={() => handleCategoryClick(category)}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors duration-200"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span>{category}</span>
+                            <span className="text-xs text-gray-400">
+                              {
+                                allProducts.filter(
+                                  (p) => p.category === category,
+                                ).length
+                              }{" "}
+                              items
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="px-4 py-2 border-t border-gray-100">
+                      <Link
+                        href="/categories"
+                        className="block text-center text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                      >
+                        View All Categories
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </nav>
+
+            {/* Right-side Actions (Search, Profile, Cart) */}
+            <div className="flex items-center space-x-2">
+              {/* Search Bar (Desktop) */}
+              <div className="hidden md:block" ref={searchContainerRef}>
+                <form onSubmit={handleSearch}>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={handleSearchInputChange}
+                      onFocus={() => setShowSuggestions(true)}
+                      placeholder="Search products..."
+                      className="w-48 lg:w-64 px-4 py-2 pr-10 text-sm text-gray-700 bg-gray-100 border border-transparent rounded-full focus:outline-none focus:bg-white focus:border-indigo-500 transition-all duration-200"
+                    />
+                    <button
+                      type="submit"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3"
+                    >
+                      {isLoading ? (
+                        <FaSpinner className="h-4 w-4 text-gray-400 animate-spin" />
+                      ) : (
+                        <FaSearch className="h-4 w-4 text-gray-500" />
+                      )}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Search Results Dropdown */}
+                {showSuggestions && searchResults.length > 0 && (
+                  <div className="absolute top-full right-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                    <ul className="py-1">
+                      {searchResults.map((product) => (
+                        <li key={product._id}>
+                          <Link
+                            href={`/product/${product._id}`}
+                            className="block px-4 py-3 hover:bg-gray-100 flex items-center"
+                            onClick={handleSuggestionClick}
+                          >
+                            <div className="relative w-12 h-12 mr-3 flex-shrink-0">
+                              <Image
+                                src={
+                                  product.imageUrls?.[0] ||
+                                  product.imageUrl ||
+                                  `https://picsum.photos/seed/${product._id}/100/100.jpg`
+                                }
+                                alt={product.name || "Product"}
+                                fill
+                                sizes="48px"
+                                className="object-cover rounded"
+                                unoptimized={
+                                  product.imageUrls?.[0]?.includes(
+                                    "example.com",
+                                  ) || product.imageUrl?.includes("example.com")
+                                }
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {product.name || "Unnamed Product"}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {product.brand || "Unknown Brand"}
+                              </p>
+                              <div className="flex items-center justify-between mt-1">
+                                <div className="flex items-center">
+                                  {renderRating(product.rating)}
+                                  <span className="ml-1 text-xs text-gray-600">
+                                    ({product.rating || 0})
+                                  </span>
+                                </div>
+                                <div>
+                                  {product.discount > 0 ? (
+                                    <>
+                                      <span className="text-sm font-bold text-gray-900">
+                                        ${formatPrice(product.finalPrice)}
+                                      </span>
+                                      <span className="text-xs text-gray-500 line-through ml-1">
+                                        ${formatPrice(product.price)}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="text-sm font-bold text-gray-900">
+                                      ${" "}
+                                      {formatPrice(
+                                        product.finalPrice || product.price,
+                                      )}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="px-4 py-2 border-t border-gray-100">
+                      <button
+                        onClick={handleSearch}
+                        className="w-full text-center text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                      >
+                        View all results for `{searchQuery}`
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* No Results Message */}
+                {showSuggestions &&
+                  searchQuery &&
+                  searchResults.length === 0 &&
+                  !isLoading && (
+                    <div className="absolute top-full right-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                      <div className="px-4 py-6 text-center">
+                        <FaSearch className="w-12 h-12 mx-auto text-gray-400 mb-2" />
+                        <p className="text-gray-500">
+                          No products found for `{searchQuery}`
+                        </p>
+                        <p className="text-sm text-gray-400 mt-1">
+                          Try different keywords
+                        </p>
+                      </div>
+                    </div>
+                  )}
+              </div>
+
+              {/* User Profile Dropdown */}
+              <div className="relative" ref={profileDropdownRef}>
+                <button
+                  onClick={() =>
+                    setIsProfileDropdownOpen(!isProfileDropdownOpen)
+                  }
+                  className="p-2 rounded-full text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-all duration-200"
+                >
+                  {status === "loading" ? (
+                    <div className="h-6 w-6 rounded-full bg-gray-300 animate-pulse"></div>
+                  ) : session ? (
+                    <div className="h-6 w-6 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-medium">
+                      {session.user.name
+                        ? session.user.name.charAt(0).toUpperCase()
+                        : "U"}
+                    </div>
+                  ) : (
+                    <FaUser className="h-6 w-6" />
+                  )}
+                </button>
+
+                {/* Profile Dropdown Menu */}
+                {isProfileDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                    {status === "loading" ? (
+                      <div className="px-4 py-3 text-center">
+                        <div className="h-4 w-20 bg-gray-300 rounded animate-pulse mx-auto mb-2"></div>
+                        <div className="h-3 w-32 bg-gray-300 rounded animate-pulse mx-auto"></div>
+                      </div>
+                    ) : session ? (
+                      <>
+                        <div className="px-4 py-3 border-b border-gray-100">
+                          <p className="text-sm font-medium text-gray-900">
+                            {session.user.name}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {session.user.email}
+                          </p>
+                          {session.user.role && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mt-1">
+                              {session.user.role === "admin" ? "Admin" : "User"}
+                            </span>
+                          )}
+                        </div>
+                        <div className="py-1">
+                          <Link
+                            href="/profile"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                            onClick={() => setIsProfileDropdownOpen(false)}
+                          >
+                            My Profile
+                          </Link>
+                          <Link
+                            href="/manage-my-order"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                            onClick={() => setIsProfileDropdownOpen(false)}
+                          >
+                            My Orders
+                          </Link>
+                          <Link
+                            href="/wishlist"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                            onClick={() => setIsProfileDropdownOpen(false)}
+                          >
+                            Wishlist
+                          </Link>
+                          <Link
+                            href="/settings"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                            onClick={() => setIsProfileDropdownOpen(false)}
+                          >
+                            Settings
+                          </Link>
+                          {session.user.role === "admin" && (
+                            <Link
+                              href="/dashboard"
+                              className="block px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 transition-colors duration-200"
+                              onClick={() => setIsProfileDropdownOpen(false)}
+                            >
+                              Admin Dashboard
+                            </Link>
+                          )}
+                        </div>
+                        <div className="py-1 border-t border-gray-100">
+                          <button
+                            onClick={() => {
+                              setIsProfileDropdownOpen(false);
+                              handleSignOut();
+                            }}
+                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200"
+                          >
+                            Sign Out
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="py-1">
+                        <Link
+                          href="/sign-in"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                          onClick={() => setIsProfileDropdownOpen(false)}
+                        >
+                          Sign In
+                        </Link>
+                        <Link
+                          href="/sign-up"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                          onClick={() => setIsProfileDropdownOpen(false)}
+                        >
+                          Create Account
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Shopping Cart Icon with Badge */}
+              <Link
+                href="/manage-add-to-cart"
+                className="p-2 rounded-full text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 relative transition-all duration-200"
+              >
+                <FaShoppingCart className="h-6 w-6" />
+                {/* Cart Badge */}
+                {cartCount > 0 && (
+                  <span className="absolute top-1 right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full">
+                    {cartCount > 99 ? "99+" : cartCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Mobile menu button */}
+              <button
+                onClick={toggleMobileMenu}
+                className="md:hidden p-2 rounded-md text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-all duration-200"
+              >
+                <span className="sr-only">Open main menu</span>
+                {!isMobileMenuOpen ? (
+                  <FaBars className="h-6 w-6" />
+                ) : (
+                  <FaTimes className="h-6 w-6" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile Search Overlay - Fixed Position */}
+      {isMobileSearchFocused && (
+        <div className="fixed inset-0 z-50 bg-white md:hidden">
+          <div className="relative h-full flex flex-col">
+            {/* Mobile Search Header */}
+            <div className="flex items-center p-4 border-b border-gray-200">
+              <button
+                onClick={() => setIsMobileSearchFocused(false)}
+                className="p-2 mr-2 text-gray-600 hover:text-gray-900"
+              >
+                <FaTimes className="h-5 w-5" />
+              </button>
+              <form onSubmit={handleSearch} className="flex-1">
                 <div className="relative">
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={handleSearchInputChange}
-                    onFocus={() => setShowSuggestions(true)}
                     placeholder="Search products..."
-                    className="w-48 lg:w-64 px-4 py-2 pr-10 text-sm text-gray-700 bg-gray-100 border border-transparent rounded-full focus:outline-none focus:bg-white focus:border-indigo-500 transition-all duration-200"
+                    className="w-full px-4 py-3 pr-10 text-base text-gray-700 bg-gray-100 border border-transparent rounded-full focus:outline-none focus:bg-white focus:border-indigo-500 transition-all duration-200"
+                    autoFocus
                   />
                   <button
                     type="submit"
                     className="absolute inset-y-0 right-0 flex items-center pr-3"
                   >
                     {isLoading ? (
-                      <FaSpinner className="h-4 w-4 text-gray-400 animate-spin" />
+                      <FaSpinner className="h-5 w-5 text-gray-400 animate-spin" />
                     ) : (
-                      <FaSearch className="h-4 w-4 text-gray-500" />
+                      <FaSearch className="h-5 w-5 text-gray-500" />
                     )}
                   </button>
                 </div>
               </form>
+            </div>
 
-              {/* Search Results Dropdown */}
-              {showSuggestions && searchResults.length > 0 && (
-                <div className="absolute top-full right-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-                  <ul className="py-1">
+            {/* Search Results */}
+            <div className="flex-1 overflow-y-auto">
+              {showSuggestions && searchResults.length > 0 ? (
+                <>
+                  <ul className="py-2">
                     {searchResults.map((product) => (
                       <li key={product._id}>
                         <Link
                           href={`/product/${product._id}`}
-                          className="block px-4 py-3 hover:bg-gray-100 flex items-center"
+                          className="block px-4 py-4 hover:bg-gray-50 flex items-center"
                           onClick={handleSuggestionClick}
                         >
-                          <div className="relative w-12 h-12 mr-3 flex-shrink-0">
+                          <div className="relative w-16 h-16 mr-4 flex-shrink-0">
                             <Image
                               src={
                                 product.imageUrls?.[0] ||
@@ -410,8 +707,8 @@ const TopNavbar = () => {
                               }
                               alt={product.name || "Product"}
                               fill
-                              sizes="48px"
-                              className="object-cover rounded"
+                              sizes="64px"
+                              className="object-cover rounded-lg"
                               unoptimized={
                                 product.imageUrls?.[0]?.includes(
                                   "example.com",
@@ -420,32 +717,29 @@ const TopNavbar = () => {
                             />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
+                            <p className="text-base font-medium text-gray-900 truncate">
                               {product.name || "Unnamed Product"}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-sm text-gray-500 mb-2">
                               {product.brand || "Unknown Brand"}
                             </p>
-                            <div className="flex items-center justify-between mt-1">
+                            <div className="flex items-center justify-between">
                               <div className="flex items-center">
                                 {renderRating(product.rating)}
-                                <span className="ml-1 text-xs text-gray-600">
-                                  ({product.rating || 0})
-                                </span>
                               </div>
                               <div>
                                 {product.discount > 0 ? (
                                   <>
-                                    <span className="text-sm font-bold text-gray-900">
+                                    <span className="text-base font-bold text-gray-900">
                                       ${formatPrice(product.finalPrice)}
                                     </span>
-                                    <span className="text-xs text-gray-500 line-through ml-1">
+                                    <span className="text-sm text-gray-500 line-through ml-2">
                                       ${formatPrice(product.price)}
                                     </span>
                                   </>
                                 ) : (
-                                  <span className="text-sm font-bold text-gray-900">
-                                    $
+                                  <span className="text-base font-bold text-gray-900">
+                                    ${" "}
                                     {formatPrice(
                                       product.finalPrice || product.price,
                                     )}
@@ -458,307 +752,65 @@ const TopNavbar = () => {
                       </li>
                     ))}
                   </ul>
-                  <div className="px-4 py-2 border-t border-gray-100">
+                  <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
                     <button
                       onClick={handleSearch}
-                      className="w-full text-center text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                      className="w-full text-center text-base text-indigo-600 hover:text-indigo-700 font-medium py-3 rounded-md hover:bg-indigo-50 transition-colors duration-200"
                     >
                       View all results for `{searchQuery}`
                     </button>
                   </div>
+                </>
+              ) : showSuggestions && searchQuery && !isLoading ? (
+                <div className="flex flex-col items-center justify-center h-64">
+                  <FaSearch className="w-16 h-16 text-gray-300 mb-4" />
+                  <p className="text-gray-500 text-lg font-medium">
+                    No products found
+                  </p>
+                  <p className="text-gray-400 mt-1">Try different keywords</p>
                 </div>
-              )}
-
-              {/* No Results Message */}
-              {showSuggestions &&
-                searchQuery &&
-                searchResults.length === 0 &&
-                !isLoading && (
-                  <div className="absolute top-full right-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                    <div className="px-4 py-6 text-center">
-                      <FaSearch className="w-12 h-12 mx-auto text-gray-400 mb-2" />
-                      <p className="text-gray-500">
-                        No products found for `{searchQuery}`
-                      </p>
-                      <p className="text-sm text-gray-400 mt-1">
-                        Try different keywords
-                      </p>
-                    </div>
-                  </div>
-                )}
-            </div>
-
-            {/* User Profile Dropdown */}
-            <div className="relative" ref={profileDropdownRef}>
-              <button
-                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                className="p-2 rounded-full text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-all duration-200"
-              >
-                {status === "loading" ? (
-                  <div className="h-6 w-6 rounded-full bg-gray-300 animate-pulse"></div>
-                ) : session ? (
-                  <div className="h-6 w-6 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-medium">
-                    {session.user.name
-                      ? session.user.name.charAt(0).toUpperCase()
-                      : "U"}
-                  </div>
-                ) : (
-                  <FaUser className="h-6 w-6" />
-                )}
-              </button>
-
-              {/* Profile Dropdown Menu */}
-              {isProfileDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                  {status === "loading" ? (
-                    <div className="px-4 py-3 text-center">
-                      <div className="h-4 w-20 bg-gray-300 rounded animate-pulse mx-auto mb-2"></div>
-                      <div className="h-3 w-32 bg-gray-300 rounded animate-pulse mx-auto"></div>
-                    </div>
-                  ) : session ? (
-                    <>
-                      <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-sm font-medium text-gray-900">
-                          {session.user.name}
-                        </p>
-                        <p className="text-xs text-gray-500 truncate">
-                          {session.user.email}
-                        </p>
-                        {session.user.role && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mt-1">
-                            {session.user.role === "admin" ? "Admin" : "User"}
-                          </span>
-                        )}
-                      </div>
-                      <div className="py-1">
-                        <Link
-                          href="/profile"
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-                          onClick={() => setIsProfileDropdownOpen(false)}
-                        >
-                          My Profile
-                        </Link>
-                        <Link
-                          href="/manage-my-order"
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-                          onClick={() => setIsProfileDropdownOpen(false)}
-                        >
-                          My Orders
-                        </Link>
-                        <Link
-                          href="/wishlist"
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-                          onClick={() => setIsProfileDropdownOpen(false)}
-                        >
-                          Wishlist
-                        </Link>
-                        <Link
-                          href="/settings"
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-                          onClick={() => setIsProfileDropdownOpen(false)}
-                        >
-                          Settings
-                        </Link>
-                        {session.user.role === "admin" && (
-                          <Link
-                            href="/dashboard"
-                            className="block px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 transition-colors duration-200"
-                            onClick={() => setIsProfileDropdownOpen(false)}
-                          >
-                            Admin Dashboard
-                          </Link>
-                        )}
-                      </div>
-                      <div className="py-1 border-t border-gray-100">
-                        <button
-                          onClick={() => {
-                            setIsProfileDropdownOpen(false);
-                            handleSignOut();
-                          }}
-                          className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200"
-                        >
-                          Sign Out
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="py-1">
-                      <Link
-                        href="/sign-in"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-                        onClick={() => setIsProfileDropdownOpen(false)}
-                      >
-                        Sign In
-                      </Link>
-                      <Link
-                        href="/sign-up"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-                        onClick={() => setIsProfileDropdownOpen(false)}
-                      >
-                        Create Account
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Shopping Cart Icon with Badge */}
-            <Link
-              href="/manage-add-to-cart"
-              className="p-2 rounded-full text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 relative transition-all duration-200"
-            >
-              <FaShoppingCart className="h-6 w-6" />
-              {/* Cart Badge */}
-              {cartCount > 0 && (
-                <span className="absolute top-1 right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full">
-                  {cartCount > 99 ? "99+" : cartCount}
-                </span>
-              )}
-            </Link>
-
-            {/* Mobile menu button */}
-            <button
-              onClick={toggleMobileMenu}
-              className="md:hidden p-2 rounded-md text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-all duration-200"
-            >
-              <span className="sr-only">Open main menu</span>
-              {!isMobileMenuOpen ? (
-                <FaBars className="h-6 w-6" />
               ) : (
-                <FaTimes className="h-6 w-6" />
+                <div className="flex flex-col items-center justify-center h-64">
+                  <FaSearch className="w-16 h-16 text-gray-300 mb-4" />
+                  <p className="text-gray-500 text-lg font-medium">
+                    Start typing to search
+                  </p>
+                </div>
               )}
-            </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Mobile menu panel with search */}
+      {/* Mobile menu panel */}
       <div
         className={`md:hidden overflow-hidden transition-all duration-300 ${isMobileMenuOpen ? "max-h-screen" : "max-h-0"}`}
       >
         <div className="px-4 pt-4 pb-3 space-y-3 bg-white border-t border-gray-200">
           {/* Mobile Search Bar */}
-          <div className="relative" ref={searchContainerRef}>
+          <div className="relative" ref={mobileSearchContainerRef}>
             <form onSubmit={handleSearch}>
-              <div className="relative right-1/2">
+              <div className="relative">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={handleSearchInputChange}
-                  onFocus={() => setShowSuggestions(true)}
+                  onFocus={() => setIsMobileSearchFocused(true)}
                   placeholder="Search products..."
-                  className="w-full top-24 left-0  px-4 py-2 pr-10 text-sm text-gray-700 bg-gray-100 border border-transparent rounded-full focus:outline-none focus:bg-white focus:border-indigo-500 transition-all duration-200"
-                  autoFocus
+                  className="w-full px-4 py-3 pr-10 text-base text-gray-700 bg-gray-100 border border-transparent rounded-full focus:outline-none focus:bg-white focus:border-indigo-500 transition-all duration-200"
                 />
                 <button
                   type="submit"
                   className="absolute inset-y-0 right-0 flex items-center pr-3"
                 >
                   {isLoading ? (
-                    <FaSpinner className="h-4 w-4 text-gray-400 animate-spin" />
+                    <FaSpinner className="h-5 w-5 text-gray-400 animate-spin" />
                   ) : (
-                    <FaSearch className="h-4 w-4 text-gray-500" />
+                    <FaSearch className="h-5 w-5 text-gray-500" />
                   )}
                 </button>
               </div>
             </form>
-
-            {/* Mobile Search Results Dropdown */}
-            {showSuggestions && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-                <ul className="py-1">
-                  {searchResults.map((product) => (
-                    <li key={product._id}>
-                      <Link
-                        href={`/product/${product._id}`}
-                        className="block px-4 py-3 hover:bg-gray-100 flex items-center"
-                        onClick={handleSuggestionClick}
-                      >
-                        <div className="relative w-12 h-12 mr-3 flex-shrink-0">
-                          <Image
-                            src={
-                              product.imageUrls?.[0] ||
-                              product.imageUrl ||
-                              `https://picsum.photos/seed/${product._id}/100/100.jpg`
-                            }
-                            alt={product.name || "Product"}
-                            fill
-                            sizes="48px"
-                            className="object-cover rounded"
-                            unoptimized={
-                              product.imageUrls?.[0]?.includes("example.com") ||
-                              product.imageUrl?.includes("example.com")
-                            }
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {product.name || "Unnamed Product"}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {product.brand || "Unknown Brand"}
-                          </p>
-                          <div className="flex items-center justify-between mt-1">
-                            <div className="flex items-center">
-                              {renderRating(product.rating)}
-                              <span className="ml-1 text-xs text-gray-600">
-                                ({product.rating || 0})
-                              </span>
-                            </div>
-                            <div>
-                              {product.discount > 0 ? (
-                                <>
-                                  <span className="text-sm font-bold text-gray-900">
-                                    ${formatPrice(product.finalPrice)}
-                                  </span>
-                                  <span className="text-xs text-gray-500 line-through ml-1">
-                                    ${formatPrice(product.price)}
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="text-sm font-bold text-gray-900">
-                                  $
-                                  {formatPrice(
-                                    product.finalPrice || product.price,
-                                  )}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-                <div className="px-4 py-2 border-t border-gray-100">
-                  <button
-                    onClick={handleSearch}
-                    className="w-full text-center text-sm text-indigo-600 hover:text-indigo-700 font-medium"
-                  >
-                    View all results for `{searchQuery}`
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Mobile No Results Message */}
-            {showSuggestions &&
-              searchQuery &&
-              searchResults.length === 0 &&
-              !isLoading && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                  <div className="px-4 py-6 text-center">
-                    <FaSearch className="w-12 h-12 mx-auto text-gray-400 mb-2" />
-                    <p className="text-gray-500">
-                      No products found for `{searchQuery}`
-                    </p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Try different keywords
-                    </p>
-                  </div>
-                </div>
-              )}
           </div>
 
           {/* Navigation Links */}
@@ -766,7 +818,7 @@ const TopNavbar = () => {
             <Link
               key={link.href}
               href={link.href}
-              className={`block px-3 py-2 rounded-md text-base font-medium transition-all duration-200 ${
+              className={`block px-3 py-3 rounded-md text-base font-medium transition-all duration-200 ${
                 pathname === link.href
                   ? "text-indigo-600 bg-indigo-50"
                   : "text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
@@ -778,7 +830,7 @@ const TopNavbar = () => {
 
           {/* Mobile Categories Section */}
           <div className="pt-2 border-t border-gray-100">
-            <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+            <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
               Categories
             </h3>
             <div className="space-y-1">
@@ -786,7 +838,7 @@ const TopNavbar = () => {
                 <button
                   key={category}
                   onClick={() => handleCategoryClick(category)}
-                  className="block w-full text-left px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
+                  className="block w-full text-left px-3 py-3 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
                 >
                   <div className="flex items-center justify-between">
                     <span>{category}</span>
@@ -802,7 +854,7 @@ const TopNavbar = () => {
               {categories.length > 6 && (
                 <Link
                   href="/categories"
-                  className="block px-3 py-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                  className="block px-3 py-3 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
                 >
                   View All Categories →
                 </Link>
@@ -813,13 +865,13 @@ const TopNavbar = () => {
           {/* Mobile User Section */}
           <div className="pt-2 border-t border-gray-100">
             {status === "loading" ? (
-              <div className="px-3 py-2">
+              <div className="px-3 py-3">
                 <div className="h-4 w-20 bg-gray-300 rounded animate-pulse mb-2"></div>
                 <div className="h-3 w-32 bg-gray-300 rounded animate-pulse"></div>
               </div>
             ) : session ? (
               <>
-                <div className="px-3 py-2">
+                <div className="px-3 py-3">
                   <p className="text-sm font-medium text-gray-900">
                     {session.user.name}
                   </p>
@@ -835,31 +887,31 @@ const TopNavbar = () => {
                 <div className="space-y-1">
                   <Link
                     href="/profile"
-                    className="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
+                    className="block px-3 py-3 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
                   >
                     My Profile
                   </Link>
                   <Link
                     href="/manage-my-order"
-                    className="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
+                    className="block px-3 py-3 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
                   >
                     My Orders
                   </Link>
                   <Link
                     href="/wishlist"
-                    className="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
+                    className="block px-3 py-3 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
                   >
                     Wishlist
                   </Link>
                   <Link
                     href="/manage-add-to-cart"
-                    className="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
+                    className="block px-3 py-3 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
                   >
                     My Cart
                   </Link>
                   <button
                     onClick={handleSignOut}
-                    className="block w-full text-left px-3 py-2 text-base text-red-600 hover:bg-red-50 transition-colors duration-200"
+                    className="block w-full text-left px-3 py-3 text-base text-red-600 hover:bg-red-50 transition-colors duration-200"
                   >
                     Sign Out
                   </button>
@@ -869,13 +921,13 @@ const TopNavbar = () => {
               <div className="space-y-1">
                 <Link
                   href="/sign-in"
-                  className="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
+                  className="block px-3 py-3 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
                 >
                   Sign In
                 </Link>
                 <Link
                   href="/sign-up"
-                  className="block px-3 py-2 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
+                  className="block px-3 py-3 text-base text-gray-700 hover:text-indigo-600 hover:bg-gray-50 transition-colors duration-200"
                 >
                   Create Account
                 </Link>
@@ -884,7 +936,7 @@ const TopNavbar = () => {
           </div>
         </div>
       </div>
-    </header>
+    </>
   );
 };
 

@@ -1,8 +1,16 @@
 // src/app/payment/page.jsx
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { CreditCard, Loader, ArrowLeft, Truck, Smartphone, Send, AlertCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  CreditCard,
+  Loader,
+  ArrowLeft,
+  Truck,
+  Smartphone,
+  Send,
+  AlertCircle,
+} from "lucide-react";
 
 const PaymentPage = () => {
   const [order, setOrder] = useState(null);
@@ -11,8 +19,12 @@ const PaymentPage = () => {
   const [error, setError] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("cod"); // Default to COD
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const orderId = searchParams.get("orderId");
+  const [orderId, setOrderId] = useState(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setOrderId(params.get("orderId"));
+  }, []);
 
   const [customerInfo, setCustomerInfo] = useState({
     name: "",
@@ -25,70 +37,73 @@ const PaymentPage = () => {
 
   useEffect(() => {
     if (!orderId) {
-      console.log('No orderId found, redirecting to cart');
+      console.log("No orderId found, redirecting to cart");
       router.push("/cart");
       return;
     }
 
-    console.log('=== DEBUG: Payment Page ===');
-    console.log('Order ID from URL:', orderId);
-    console.log('Order ID type:', typeof orderId);
+    console.log("=== DEBUG: Payment Page ===");
+    console.log("Order ID from URL:", orderId);
+    console.log("Order ID type:", typeof orderId);
 
     const fetchOrder = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        console.log('Fetching order from API...');
+        console.log("Fetching order from API...");
         const response = await fetch(`/api/manage-my-order/${orderId}`);
-        
-        console.log('Response status:', response.status);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+        console.log("Response status:", response.status);
+        console.log(
+          "Response headers:",
+          Object.fromEntries(response.headers.entries()),
+        );
 
         // Check if response is HTML (likely a 404 page)
         const contentType = response.headers.get("content-type");
-        console.log('Content-Type:', contentType);
-        
+        console.log("Content-Type:", contentType);
+
         if (contentType && contentType.includes("text/html")) {
-          console.log('Received HTML response, likely a 404 page');
+          console.log("Received HTML response, likely a 404 page");
           throw new Error("Order not found");
         }
 
         if (!response.ok) {
-          console.log('Response not OK, trying to parse error...');
+          console.log("Response not OK, trying to parse error...");
           const errorText = await response.text();
-          console.log('Error response text:', errorText);
-          
+          console.log("Error response text:", errorText);
+
           let errorData;
           try {
             errorData = JSON.parse(errorText);
           } catch (e) {
-            console.log('Could not parse error as JSON');
+            console.log("Could not parse error as JSON");
           }
-          
+
           throw new Error(
             errorData?.message ||
-              `Failed to fetch order with status ${response.status}`
+              `Failed to fetch order with status ${response.status}`,
           );
         }
 
         const data = await response.json();
-        console.log('Order data received:', data);
-        
+        console.log("Order data received:", data);
+
         if (data.success) {
-          console.log('Order found, setting state');
+          console.log("Order found, setting state");
           setOrder(data.data);
         } else {
-          console.log('API returned success: false');
+          console.log("API returned success: false");
           throw new Error(data.message || "Failed to fetch order details.");
         }
       } catch (err) {
-        console.error('=== ERROR IN FETCH ORDER ===');
-        console.error('Error message:', err.message);
-        console.error('Error stack:', err.stack);
+        console.error("=== ERROR IN FETCH ORDER ===");
+        console.error("Error message:", err.message);
+        console.error("Error stack:", err.stack);
         setError(
           err.message ||
-            "An unexpected error occurred while fetching your order. Please try again."
+            "An unexpected error occurred while fetching your order. Please try again.",
         );
       } finally {
         setIsLoading(false);
@@ -189,18 +204,22 @@ const PaymentPage = () => {
       } else {
         // Improved error handling for payment gateway specific errors
         let errorMessage = data.message || "Payment initiation failed.";
-        
-        if (errorMessage.includes("Store Credential Error") || errorMessage.includes("Store is De-active")) {
-          errorMessage = "Payment gateway credentials are invalid. Please use Cash on Delivery or contact support.";
+
+        if (
+          errorMessage.includes("Store Credential Error") ||
+          errorMessage.includes("Store is De-active")
+        ) {
+          errorMessage =
+            "Payment gateway credentials are invalid. Please use Cash on Delivery or contact support.";
         }
-        
+
         throw new Error(errorMessage);
       }
     } catch (err) {
       console.error("Error processing payment:", err);
       setError(
         err.message ||
-          "Failed to process payment. Please check your information and try again."
+          "Failed to process payment. Please check your information and try again.",
       );
     } finally {
       setIsProcessing(false);
@@ -267,7 +286,10 @@ const PaymentPage = () => {
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <AlertCircle className="h-5 w-5 text-red-400" aria-hidden="true" />
+                  <AlertCircle
+                    className="h-5 w-5 text-red-400"
+                    aria-hidden="true"
+                  />
                 </div>
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-red-800">
@@ -327,7 +349,9 @@ const PaymentPage = () => {
                   />
                   <CreditCard className="h-5 w-5 mr-2 text-blue-600" />
                   <div>
-                    <p className="font-medium">Credit/Debit Card (SSLCommerz)</p>
+                    <p className="font-medium">
+                      Credit/Debit Card (SSLCommerz)
+                    </p>
                     <p className="text-sm text-gray-500">
                       Pay with Visa, Mastercard, or other cards
                     </p>
