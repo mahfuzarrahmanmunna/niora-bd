@@ -11,7 +11,7 @@ export default function Home() {
     <div className="px-3 md:px-24 pt-5">
       <ImageSlider />
       {/* <AllCategoryPage /> */}
-      <CategoriesSection/>
+      <CategoriesSection />
       {/* <CategoryPage /> */}
       <PopularProduct />
       <AllProducts />

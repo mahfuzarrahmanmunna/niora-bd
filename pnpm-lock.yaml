@@ -65,6 +65,9 @@ importers:
       react-icons:
         specifier: ^5.5.0
         version: 5.5.0(react@19.2.0)
+      react-pwa-install:
+        specifier: ^1.0.12
+        version: 1.0.12(react@19.2.0)
       react-toastify:
         specifier: ^11.0.5
         version: 11.0.5(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -2031,6 +2034,9 @@ packages:
   minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
 
+  mobile-device-detect@0.4.3:
+    resolution: {integrity: sha512-SN9EBE9SoJgkb83kuUVoIp3R9OGYE5dYEnLEz2oLooh0DzgtQ72BJmpNGqrgFvmfE4iLR2CaVJ3RjUcStheVZg==}
+
   mongodb-connection-string-url@7.0.0:
     resolution: {integrity: sha512-irhhjRVLE20hbkRl4zpAYLnDMM+zIZnp0IDB9akAFFUZp/3XdOfwwddc7y6cNvF2WCEtfTYRwYbIfYa2kVY0og==}
     engines: {node: '>=20.19.0'}
@@ -2262,6 +2268,11 @@ packages:
 
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
+
+  react-pwa-install@1.0.12:
+    resolution: {integrity: sha512-zy1ZPfUIDTiBap1pycB6IZw+8wSRwncFwtjuUHYwRX2+285EabTcvXAwl2PdIzcXc1fh+K0ZI6Snccx5bgLpxg==}
+    peerDependencies:
+      react: 16.x
 
   react-remove-scroll-bar@2.3.8:
     resolution: {integrity: sha512-9r+yi9+mgU33AKcj6IbT9oRCO78WriSj6t/cF8DWBZJ9aOGPOTEDvdUDz1FwKim7QXWwmHqtdHnRJfhAxEG46Q==}
@@ -4573,6 +4584,8 @@ snapshots:
 
   minimist@1.2.8: {}
 
+  mobile-device-detect@0.4.3: {}
+
   mongodb-connection-string-url@7.0.0:
     dependencies:
       '@types/whatwg-url': 13.0.0
@@ -4775,6 +4788,11 @@ snapshots:
       react: 19.2.0
 
   react-is@16.13.1: {}
+
+  react-pwa-install@1.0.12(react@19.2.0):
+    dependencies:
+      mobile-device-detect: 0.4.3
+      react: 19.2.0
 
   react-remove-scroll-bar@2.3.8(react@19.2.0):
     dependencies:

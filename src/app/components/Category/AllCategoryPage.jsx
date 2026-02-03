@@ -1,7 +1,7 @@
 // components/CategoriesSection.jsx
-'use client';
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
+"use client";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 
 const CategoriesSection = () => {
   const [categories, setCategories] = useState([]);
@@ -11,42 +11,25 @@ const CategoriesSection = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch('/api/products');
+        const response = await fetch("http://localhost:3000/api/products");
         const data = await response.json();
-        
-        if (data.success) {
-          // Handle the nested data structure
-          let products = []; // Changed from const to let
-          
-          // Check if data.data is an array of products or contains nested data
-          if (Array.isArray(data.data)) {
-            // Check if the first item has a nested data property
-            if (data.data.length > 0 && data.data[0].data && Array.isArray(data.data[0].data)) {
-              // Extract all products from the nested data arrays
-              data.data.forEach(item => {
-                if (item.data && Array.isArray(item.data)) {
-                  products = [...products, ...item.data];
-                }
-              });
-            } else {
-              // Use data.data directly if it's already an array of products
-              products = data.data; // Changed from data to data.data
-            }
-          }
-          
-          // Extract unique categories, filtering out undefined/null values
-          const uniqueCategories = [...new Set(
-            products
-              .map(product => product.category)
-              .filter(category => category && typeof category === 'string')
-          )];
-          
+
+        if (data.success && data.data) {
+          const products = data.data || [];
+          const uniqueCategories = [
+            ...new Set(
+              products
+                .map((product) => product.category)
+                .filter((category) => category && typeof category === "string"),
+            ),
+          ];
           setCategories(uniqueCategories);
         } else {
-          setError('Failed to fetch categories');
+          setError("Failed to fetch categories");
         }
       } catch (err) {
-        setError('An error occurred while fetching categories');
+        console.error("Error fetching categories:", err);
+        setError("An error occurred while fetching categories");
       } finally {
         setLoading(false);
       }
@@ -65,29 +48,33 @@ const CategoriesSection = () => {
 
   if (error) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+      <div
+        className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+        role="alert"
+      >
         <strong className="font-bold">Error:</strong>
-        <span className="block sm:inline"> {error}</span>
+        {/* <span className="block sm:inline"> {error}</span> */}
       </div>
     );
   }
 
   return (
-    <div className="w-full py-8">
-      <h2 className="text-3xl font-bold text-center mb-8 text-gray-800">Shop by Category</h2>
-      
-      {/* Scrollable container with visible scrollbar */}
+    <div className="w-full py-8 px-4">
+      <h2 className="text-3xl font-bold text-center mb-8 text-gray-800">
+        Shop by Category
+      </h2>
+
       <div className="relative w-full">
-        <div 
+        <div
           className="flex overflow-x-auto space-x-4 pb-4 scroll-smooth"
-          style={{ scrollbarWidth: 'auto' }}
+          style={{ scrollbarWidth: "auto" }}
         >
           {categories.map((category, index) => (
-            <Link 
-              href={`/products?category=${category.toLowerCase()}`} 
+            <Link
+              href={`/products?category=${category.toLowerCase()}`}
               key={index}
               className="flex-shrink-0 group relative overflow-hidden rounded-lg shadow-md transition-all duration-300 hover:shadow-xl"
-              style={{ width: '140px', height: '140px' }}
+              style={{ width: "140px", height: "140px" }}
             >
               <div className="bg-gradient-to-r from-purple-400 to-indigo-600 h-full w-full flex items-center justify-center">
                 <div className="text-center p-4">
@@ -101,23 +88,19 @@ const CategoriesSection = () => {
           ))}
         </div>
       </div>
-      
-      {/* Custom scrollbar styling */}
+
       <style jsx>{`
         .overflow-x-auto::-webkit-scrollbar {
           height: 8px;
         }
-        
         .overflow-x-auto::-webkit-scrollbar-track {
           background: #f1f1f1;
           border-radius: 10px;
         }
-        
         .overflow-x-auto::-webkit-scrollbar-thumb {
           background: #888;
           border-radius: 10px;
         }
-        
         .overflow-x-auto::-webkit-scrollbar-thumb:hover {
           background: #555;
         }
