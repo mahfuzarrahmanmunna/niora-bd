@@ -38,7 +38,7 @@ const PaymentPage = () => {
   useEffect(() => {
     if (!orderId) {
       console.log("No orderId found, redirecting to cart");
-      router.push("/cart");
+      router.push("/manage-add-to-cart");
       return;
     }
 

@@ -37,7 +37,7 @@ export default function PaymentSuccessClient() {
           <Check className="h-12 w-12 mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-2">Payment Successful!</h1>
           <p className="mb-4">
-            Your payment has been processed successfully. We'll send you a
+            Your payment has been processed successfully. We will send you a
             confirmation email shortly.
           </p>
           <p className="text-sm">Order ID: {orderId}</p>

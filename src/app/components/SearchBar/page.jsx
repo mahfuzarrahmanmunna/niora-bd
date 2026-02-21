@@ -260,7 +260,7 @@ function TopNavbar() {
                   <FaSearch className="h-5 w-5" />
                 </button>
                 {isSearchOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 p-4">
+                  <div className="absolute -right-44 mt-2 w-80 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 p-4">
                     <form onSubmit={handleSearch}>
                       <div className="flex">
                         <input

@@ -1,8 +1,15 @@
 // src/app/manage-my-order/page.jsx
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Package, Calendar, DollarSign, Eye, Search, Filter, RefreshCw } from "lucide-react";
+import {
+  Package,
+  Eye,
+  Search,
+  Filter,
+  RefreshCw,
+  ChevronDown,
+} from "lucide-react";
 
 const ManageMyOrderPage = () => {
   const [orders, setOrders] = useState([]);
@@ -13,120 +20,135 @@ const ManageMyOrderPage = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const router = useRouter();
+  const hasFetchedRef = useRef(false);
 
-  // In a real app, this would come from authentication
-  const userId = "user123";
-
-  useEffect(() => {
-    fetchOrders();
+  // Get userId from localStorage
+  const getUserId = useCallback(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("userId") || "guest-user";
   }, []);
 
-  useEffect(() => {
-    filterOrders();
-  }, [orders, searchTerm, statusFilter]);
-
-  const fetchOrders = async () => {
+  // Fetch orders - memoized
+  const fetchOrders = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/manage-my-order/user/${userId}`);
-      
+      const userId = getUserId();
+      console.log("Fetching orders for userId:", userId);
+
+      const response = await fetch(
+        `/api/orders?userId=${encodeURIComponent(userId)}`,
+      );
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch orders: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.message || `Failed to fetch orders: ${response.status}`,
+        );
       }
 
       const data = await response.json();
-      
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to fetch orders');
-      }
 
-      setOrders(data.data || []);
+      if (data.success) {
+        setOrders(data.data || []);
+        setFilteredOrders(data.data || []);
+      } else {
+        throw new Error(data.message || "Failed to fetch orders");
+      }
     } catch (err) {
       console.error("Error fetching orders:", err);
-      setError(err.message || "Failed to fetch orders. Please try again.");
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [getUserId]);
 
-  const filterOrders = () => {
+  // Initial fetch - only once
+  useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+    fetchOrders();
+  }, [fetchOrders]);
+
+  // Filter orders when search/status changes
+  useEffect(() => {
     let filtered = [...orders];
 
-    // Filter by search term
     if (searchTerm) {
+      const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (order) =>
-          order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          order.items.some((item) =>
-            item.name.toLowerCase().includes(searchTerm.toLowerCase())
-          )
+          order._id?.toLowerCase().includes(term) ||
+          order.items?.some((item) => item.name?.toLowerCase().includes(term)),
       );
     }
 
-    // Filter by status
     if (statusFilter !== "all") {
       filtered = filtered.filter((order) => order.status === statusFilter);
     }
 
     setFilteredOrders(filtered);
-  };
+  }, [orders, searchTerm, statusFilter]);
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case "delivered":
-        return "bg-green-100 text-green-800";
-      case "processing":
-        return "bg-blue-100 text-blue-800";
-      case "shipped":
-        return "bg-purple-100 text-purple-800";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "cancelled":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+    const colors = {
+      delivered: "bg-green-100 text-green-800",
+      processing: "bg-blue-100 text-blue-800",
+      shipped: "bg-purple-100 text-purple-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      cancelled: "bg-red-100 text-red-800",
+    };
+    return colors[status] || "bg-gray-100 text-gray-800";
   };
 
   const getPaymentStatusColor = (status) => {
-    switch (status) {
-      case "paid":
-        return "bg-green-100 text-green-800";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "failed":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+    const colors = {
+      paid: "bg-green-100 text-green-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      failed: "bg-red-100 text-red-800",
+    };
+    return colors[status] || "bg-gray-100 text-gray-800";
   };
 
   const formatDate = (dateString) => {
-    const options = { year: "numeric", month: "short", day: "numeric" };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    return new Date(dateString).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const handleRefresh = () => {
+    hasFetchedRef.current = false;
+    fetchOrders();
   };
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+      <div className="flex justify-center items-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading orders...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="max-w-md mx-auto px-4 py-8 text-center">
-          <div className="bg-red-100 text-red-600 p-6 rounded-lg">
-            <h2 className="text-lg font-semibold mb-2">Error</h2>
-            <p>{error}</p>
+      <div className="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-lg shadow p-6 text-center">
+          <div className="text-red-500 mb-4">
+            <Package className="h-12 w-12 mx-auto" />
           </div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">
+            Error Loading Orders
+          </h2>
+          <p className="text-gray-600 mb-4">{error}</p>
           <button
-            onClick={fetchOrders}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
             Try Again
           </button>
@@ -147,51 +169,60 @@ const ManageMyOrderPage = () => {
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="relative flex-1 max-w-md">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Search by order ID or product name"
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Search by order ID or product"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
               >
                 <Filter className="h-4 w-4 mr-2" />
                 Filters
-                <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showFilters ? 'transform rotate-180' : ''}`} />
+                <ChevronDown
+                  className={`h-4 w-4 ml-2 transition-transform ${showFilters ? "rotate-180" : ""}`}
+                />
               </button>
               <button
-                onClick={fetchOrders}
-                className="flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                onClick={handleRefresh}
+                className="flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
               </button>
             </div>
           </div>
-          
+
           {showFilters && (
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="flex flex-wrap gap-2">
-                <span className="text-sm font-medium text-gray-700 self-center">Status:</span>
-                {["all", "pending", "processing", "shipped", "delivered", "cancelled"].map((status) => (
+                <span className="text-sm font-medium text-gray-700">
+                  Status:
+                </span>
+                {[
+                  "all",
+                  "pending",
+                  "processing",
+                  "shipped",
+                  "delivered",
+                  "cancelled",
+                ].map((status) => (
                   <button
                     key={status}
                     onClick={() => setStatusFilter(status)}
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    className={`px-3 py-1 rounded-full text-sm font-medium capitalize ${
                       statusFilter === status
                         ? "bg-blue-100 text-blue-800"
                         : "bg-gray-100 text-gray-800 hover:bg-gray-200"
                     }`}
                   >
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                    {status}
                   </button>
                 ))}
               </div>
@@ -202,21 +233,21 @@ const ManageMyOrderPage = () => {
         {/* Orders List */}
         {filteredOrders.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-            <Package className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No orders found</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900">
+              No orders found
+            </h3>
+            <p className="text-gray-500 mt-2">
               {searchTerm || statusFilter !== "all"
-                ? "Try adjusting your search or filter criteria"
+                ? "Try adjusting your filters"
                 : "You haven't placed any orders yet"}
             </p>
-            <div className="mt-6">
-              <button
-                onClick={() => router.push("/")}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Start Shopping
-              </button>
-            </div>
+            <button
+              onClick={() => router.push("/")}
+              className="mt-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Start Shopping
+            </button>
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -224,58 +255,62 @@ const ManageMyOrderPage = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Order ID
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Date
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Items
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Total
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Status
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Payment
                     </th>
-                    <th scope="col" className="relative px-6 py-3">
-                      <span className="sr-only">View</span>
-                    </th>
+                    <th className="px-6 py-3"></th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200">
                   {filteredOrders.map((order) => (
-                    <tr key={order._id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {order._id.substring(0, 8)}...
+                    <tr key={order._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                        #{order._id?.substring(0, 8)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-500">
                         {formatDate(order.createdAt)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {order.items?.length || 0} items
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${order.totalPrice.toFixed(2)}
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                        ${order.totalPrice?.toFixed(2) || "0.00"}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(order.status)}`}>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full capitalize ${getStatusColor(order.status)}`}
+                        >
                           {order.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPaymentStatusColor(order.paymentStatus)}`}>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full capitalize ${getPaymentStatusColor(order.paymentStatus)}`}
+                        >
                           {order.paymentStatus}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-6 py-4 text-right">
                         <button
-                          onClick={() => router.push(`/manage-my-order/${order._id}`)}
-                          className="text-blue-600 hover:text-blue-900 flex items-center"
+                          onClick={() =>
+                            router.push(`/manage-my-order/${order._id}`)
+                          }
+                          className="text-blue-600 hover:text-blue-800 flex items-center justify-end"
                         >
                           <Eye className="h-4 w-4 mr-1" />
                           View

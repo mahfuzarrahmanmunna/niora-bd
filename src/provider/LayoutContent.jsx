@@ -25,7 +25,7 @@ export default function LayoutContent({ children }) {
 
         {/* TOP NAVBAR: Hidden on dashboard */}
         {!isDashboard && (
-          <div className="hidden md:flex">
+          <div className="hidden md:flex mb-12">
             <Suspense fallback={<div className="h-16 bg-white shadow-sm" />}>
               <TopNavbar />
             </Suspense>

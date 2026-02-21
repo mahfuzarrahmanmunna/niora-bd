@@ -1,4 +1,3 @@
-// components/TopNavbar/TopNavbar.js
 "use client";
 
 import Link from "next/link";
@@ -41,6 +40,8 @@ const TopNavbar = () => {
   const categoryDropdownRef = useRef(null);
   const profileDropdownRef = useRef(null);
   const debounceTimerRef = useRef(null);
+  const hasFetchedCartRef = useRef(false);
+  const hasFetchedProductsRef = useRef(false);
 
   // Helper function to safely format price
   const formatPrice = (price) => {
@@ -51,22 +52,27 @@ const TopNavbar = () => {
   // Fetch cart count when component mounts
   useEffect(() => {
     const fetchCartCount = async () => {
+      if (hasFetchedCartRef.current) return;
+      hasFetchedCartRef.current = true;
+
       try {
-        // Get user ID from localStorage
         const userId =
           localStorage.getItem("userId") || "guest-user-" + Date.now();
 
         const response = await fetch(`/api/cart?userId=${userId}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.data) {
-            // Calculate total items in cart
-            const totalItems = data.data.reduce(
-              (total, item) => total + item.quantity,
-              0,
-            );
-            setCartCount(totalItems);
-          }
+
+        if (!response.ok) {
+          console.error("Cart API error:", response.status);
+          return;
+        }
+
+        const data = await response.json();
+        if (data.success && data.data) {
+          const totalItems = data.data.reduce(
+            (total, item) => total + item.quantity,
+            0,
+          );
+          setCartCount(totalItems);
         }
       } catch (error) {
         console.error("Error fetching cart count:", error);
@@ -79,9 +85,12 @@ const TopNavbar = () => {
   // Fetch all products when component mounts
   useEffect(() => {
     const fetchProducts = async () => {
+      if (hasFetchedProductsRef.current) return;
+      hasFetchedProductsRef.current = true;
+
       try {
         setIsLoading(true);
-        const response = await fetch("http://localhost:3000/api/products");
+        const response = await fetch("/api/products");
         if (!response.ok) {
           throw new Error("Failed to fetch products");
         }
@@ -112,17 +121,11 @@ const TopNavbar = () => {
   // Handle scroll effect for navbar
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 10) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+      setIsScrolled(window.scrollY > 10);
     };
 
     window.addEventListener("scroll", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Close mobile menu when changing routes
@@ -160,9 +163,7 @@ const TopNavbar = () => {
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Debounced filter function
@@ -174,14 +175,12 @@ const TopNavbar = () => {
         return;
       }
 
-      // Filter products based on search query
       const filteredProducts = allProducts.filter((product) => {
         const searchTerm = query.toLowerCase();
         const name = (product.name || "").toLowerCase();
         const brand = (product.brand || "").toLowerCase();
         const category = (product.category || "").toLowerCase();
 
-        // Exact match
         if (
           name.includes(searchTerm) ||
           brand.includes(searchTerm) ||
@@ -190,7 +189,6 @@ const TopNavbar = () => {
           return true;
         }
 
-        // Partial match with tolerance for typos
         const nameWords = name.split(" ");
         const brandWords = brand.split(" ");
         const categoryWords = category.split(" ");
@@ -202,7 +200,7 @@ const TopNavbar = () => {
         );
       });
 
-      setSearchResults(filteredProducts.slice(0, 5)); // Limit to 5 results in dropdown
+      setSearchResults(filteredProducts.slice(0, 5));
       setShowSuggestions(true);
     },
     [allProducts],
@@ -213,15 +211,13 @@ const TopNavbar = () => {
     const value = e.target.value;
     setSearchQuery(value);
 
-    // Clear existing timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
-    // Set a new timer
     debounceTimerRef.current = setTimeout(() => {
       debouncedFilterProducts(value);
-    }, 300); // 300ms delay
+    }, 300);
   };
 
   const handleSearch = (e) => {
@@ -254,7 +250,6 @@ const TopNavbar = () => {
     router.push("/");
   };
 
-  // Function to render star rating
   const renderRating = (rating) => {
     const ratingValue = parseFloat(rating) || 0;
     const fullStars = Math.floor(ratingValue);
@@ -283,7 +278,6 @@ const TopNavbar = () => {
     { href: "/manage-add-to-cart", label: "Cart" },
   ];
 
-  // Popular categories to show first
   const popularCategories = ["Makeup", "Skincare", "Hair Care", "Fragrance"];
   const sortedCategories = [
     ...popularCategories.filter((cat) => categories.includes(cat)),
@@ -293,11 +287,12 @@ const TopNavbar = () => {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? "bg-white shadow-lg" : "bg-white shadow-sm"}`}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          isScrolled ? "bg-white shadow-lg" : "bg-white shadow-sm"
+        }`}
       >
         <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            {/* Logo / Brand Name */}
             <div className="flex-shrink-0">
               <Link href="/" className="flex items-center">
                 <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
@@ -306,7 +301,6 @@ const TopNavbar = () => {
               </Link>
             </div>
 
-            {/* Desktop Navigation Links */}
             <nav className="hidden md:flex space-x-1">
               {navLinks.map((link) => (
                 <Link
@@ -322,7 +316,6 @@ const TopNavbar = () => {
                 </Link>
               ))}
 
-              {/* Categories Dropdown */}
               <div className="relative" ref={categoryDropdownRef}>
                 <button
                   onClick={() =>
@@ -336,11 +329,12 @@ const TopNavbar = () => {
                 >
                   Categories
                   <FaChevronDown
-                    className={`ml-1 h-4 w-4 transition-transform duration-200 ${isCategoryDropdownOpen ? "rotate-180" : ""}`}
+                    className={`ml-1 h-4 w-4 transition-transform duration-200 ${
+                      isCategoryDropdownOpen ? "rotate-180" : ""
+                    }`}
                   />
                 </button>
 
-                {/* Category Dropdown Menu */}
                 {isCategoryDropdownOpen && (
                   <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
                     <div className="py-2">
@@ -377,9 +371,7 @@ const TopNavbar = () => {
               </div>
             </nav>
 
-            {/* Right-side Actions (Search, Profile, Cart) */}
             <div className="flex items-center space-x-2">
-              {/* Search Bar (Desktop) */}
               <div className="hidden md:block" ref={searchContainerRef}>
                 <form onSubmit={handleSearch}>
                   <div className="relative">
@@ -404,7 +396,6 @@ const TopNavbar = () => {
                   </div>
                 </form>
 
-                {/* Search Results Dropdown */}
                 {showSuggestions && searchResults.length > 0 && (
                   <div className="absolute top-full right-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
                     <ul className="py-1">
@@ -426,11 +417,6 @@ const TopNavbar = () => {
                                 fill
                                 sizes="48px"
                                 className="object-cover rounded"
-                                unoptimized={
-                                  product.imageUrls?.[0]?.includes(
-                                    "example.com",
-                                  ) || product.imageUrl?.includes("example.com")
-                                }
                               />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -443,9 +429,6 @@ const TopNavbar = () => {
                               <div className="flex items-center justify-between mt-1">
                                 <div className="flex items-center">
                                   {renderRating(product.rating)}
-                                  <span className="ml-1 text-xs text-gray-600">
-                                    ({product.rating || 0})
-                                  </span>
                                 </div>
                                 <div>
                                   {product.discount > 0 ? (
@@ -483,7 +466,6 @@ const TopNavbar = () => {
                   </div>
                 )}
 
-                {/* No Results Message */}
                 {showSuggestions &&
                   searchQuery &&
                   searchResults.length === 0 &&
@@ -502,7 +484,6 @@ const TopNavbar = () => {
                   )}
               </div>
 
-              {/* User Profile Dropdown */}
               <div className="relative" ref={profileDropdownRef}>
                 <button
                   onClick={() =>
@@ -523,7 +504,6 @@ const TopNavbar = () => {
                   )}
                 </button>
 
-                {/* Profile Dropdown Menu */}
                 {isProfileDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                     {status === "loading" ? (
@@ -567,13 +547,6 @@ const TopNavbar = () => {
                             onClick={() => setIsProfileDropdownOpen(false)}
                           >
                             Wishlist
-                          </Link>
-                          <Link
-                            href="/settings"
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-                            onClick={() => setIsProfileDropdownOpen(false)}
-                          >
-                            Settings
                           </Link>
                           {session.user.role === "admin" && (
                             <Link
@@ -619,13 +592,11 @@ const TopNavbar = () => {
                 )}
               </div>
 
-              {/* Shopping Cart Icon with Badge */}
               <Link
                 href="/manage-add-to-cart"
                 className="p-2 rounded-full text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 relative transition-all duration-200"
               >
                 <FaShoppingCart className="h-6 w-6" />
-                {/* Cart Badge */}
                 {cartCount > 0 && (
                   <span className="absolute top-1 right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full">
                     {cartCount > 99 ? "99+" : cartCount}
@@ -633,7 +604,6 @@ const TopNavbar = () => {
                 )}
               </Link>
 
-              {/* Mobile menu button */}
               <button
                 onClick={toggleMobileMenu}
                 className="md:hidden p-2 rounded-md text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-all duration-200"
@@ -650,11 +620,10 @@ const TopNavbar = () => {
         </div>
       </header>
 
-      {/* Mobile Search Overlay - Fixed Position */}
+      {/* Mobile Search Overlay */}
       {isMobileSearchFocused && (
         <div className="fixed inset-0 z-50 bg-white md:hidden">
           <div className="relative h-full flex flex-col">
-            {/* Mobile Search Header */}
             <div className="flex items-center p-4 border-b border-gray-200">
               <button
                 onClick={() => setIsMobileSearchFocused(false)}
@@ -686,7 +655,6 @@ const TopNavbar = () => {
               </form>
             </div>
 
-            {/* Search Results */}
             <div className="flex-1 overflow-y-auto">
               {showSuggestions && searchResults.length > 0 ? (
                 <>
@@ -709,11 +677,6 @@ const TopNavbar = () => {
                               fill
                               sizes="64px"
                               className="object-cover rounded-lg"
-                              unoptimized={
-                                product.imageUrls?.[0]?.includes(
-                                  "example.com",
-                                ) || product.imageUrl?.includes("example.com")
-                              }
                             />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -784,10 +747,11 @@ const TopNavbar = () => {
 
       {/* Mobile menu panel */}
       <div
-        className={`md:hidden overflow-hidden transition-all duration-300 ${isMobileMenuOpen ? "max-h-screen" : "max-h-0"}`}
+        className={`md:hidden overflow-hidden transition-all duration-300 ${
+          isMobileMenuOpen ? "max-h-screen" : "max-h-0"
+        }`}
       >
         <div className="px-4 pt-4 pb-3 space-y-3 bg-white border-t border-gray-200">
-          {/* Mobile Search Bar */}
           <div className="relative" ref={mobileSearchContainerRef}>
             <form onSubmit={handleSearch}>
               <div className="relative">
@@ -813,7 +777,6 @@ const TopNavbar = () => {
             </form>
           </div>
 
-          {/* Navigation Links */}
           {navLinks.map((link) => (
             <Link
               key={link.href}
@@ -828,7 +791,6 @@ const TopNavbar = () => {
             </Link>
           ))}
 
-          {/* Mobile Categories Section */}
           <div className="pt-2 border-t border-gray-100">
             <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
               Categories
@@ -862,7 +824,6 @@ const TopNavbar = () => {
             </div>
           </div>
 
-          {/* Mobile User Section */}
           <div className="pt-2 border-t border-gray-100">
             {status === "loading" ? (
               <div className="px-3 py-3">
