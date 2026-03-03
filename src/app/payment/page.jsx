@@ -3,13 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  CreditCard,
   Loader,
   ArrowLeft,
   Truck,
   Smartphone,
   Send,
   AlertCircle,
+  Package,
 } from "lucide-react";
 
 const PaymentPage = () => {
@@ -17,14 +17,13 @@ const PaymentPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState("cod"); // Default to COD
+
+  // Payment and Delivery State
+  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [deliveryMethod, setDeliveryMethod] = useState("steadfast"); // Default delivery method
+
   const router = useRouter();
   const [orderId, setOrderId] = useState(null);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setOrderId(params.get("orderId"));
-  }, []);
 
   const [customerInfo, setCustomerInfo] = useState({
     name: "",
@@ -35,83 +34,51 @@ const PaymentPage = () => {
     country: "Bangladesh",
   });
 
+  // 1. Get Order ID from URL
   useEffect(() => {
-    if (!orderId) {
-      console.log("No orderId found, redirecting to cart");
-      router.push("/manage-add-to-cart");
-      return;
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("orderId");
+    if (id) {
+      setOrderId(id);
+    } else {
+      setError("No Order ID provided.");
+      setIsLoading(false);
     }
+  }, []);
 
-    console.log("=== DEBUG: Payment Page ===");
-    console.log("Order ID from URL:", orderId);
-    console.log("Order ID type:", typeof orderId);
+  // 2. Fetch Order Data
+  useEffect(() => {
+    if (!orderId) return;
 
     const fetchOrder = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        console.log("Fetching order from API...");
         const response = await fetch(`/api/manage-my-order/${orderId}`);
 
-        console.log("Response status:", response.status);
-        console.log(
-          "Response headers:",
-          Object.fromEntries(response.headers.entries()),
-        );
-
-        // Check if response is HTML (likely a 404 page)
         const contentType = response.headers.get("content-type");
-        console.log("Content-Type:", contentType);
-
         if (contentType && contentType.includes("text/html")) {
-          console.log("Received HTML response, likely a 404 page");
-          throw new Error("Order not found");
-        }
-
-        if (!response.ok) {
-          console.log("Response not OK, trying to parse error...");
-          const errorText = await response.text();
-          console.log("Error response text:", errorText);
-
-          let errorData;
-          try {
-            errorData = JSON.parse(errorText);
-          } catch (e) {
-            console.log("Could not parse error as JSON");
-          }
-
-          throw new Error(
-            errorData?.message ||
-              `Failed to fetch order with status ${response.status}`,
-          );
+          throw new Error("Order not found (404)");
         }
 
         const data = await response.json();
-        console.log("Order data received:", data);
 
-        if (data.success) {
-          console.log("Order found, setting state");
+        if (data.success && data.data) {
           setOrder(data.data);
         } else {
-          console.log("API returned success: false");
           throw new Error(data.message || "Failed to fetch order details.");
         }
       } catch (err) {
-        console.error("=== ERROR IN FETCH ORDER ===");
-        console.error("Error message:", err.message);
-        console.error("Error stack:", err.stack);
-        setError(
-          err.message ||
-            "An unexpected error occurred while fetching your order. Please try again.",
-        );
+        console.error("Error fetching order:", err);
+        setError(err.message);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchOrder();
-  }, [orderId, router]);
+  }, [orderId]);
 
   const handleInputChange = (e) => {
     setCustomerInfo({ ...customerInfo, [e.target.name]: e.target.value });
@@ -128,51 +95,30 @@ const PaymentPage = () => {
       let apiEndpoint;
       let requestBody;
 
+      // Common payload data
+      const basePayload = {
+        orderId: order._id,
+        amount: order.totalPrice,
+        customerInfo,
+        deliveryMethod, // Sending the selected delivery method
+      };
+
       switch (paymentMethod) {
-        case "sslcommerz":
-          apiEndpoint = "/api/sslcommerz/init";
-          requestBody = {
-            orderId: order._id,
-            amount: order.totalPrice,
-            customerInfo,
-          };
-          break;
         case "bkash":
           apiEndpoint = "/api/bkash/init";
-          requestBody = {
-            orderId: order._id,
-            amount: order.totalPrice,
-            customerInfo,
-          };
-          break;
-        case "rocket":
-          apiEndpoint = "/api/rocket/init";
-          requestBody = {
-            orderId: order._id,
-            amount: order.totalPrice,
-            customerInfo,
-          };
+          requestBody = basePayload;
           break;
         case "nagad":
           apiEndpoint = "/api/nagad/init";
-          requestBody = {
-            orderId: order._id,
-            amount: order.totalPrice,
-            customerInfo,
-          };
+          requestBody = basePayload;
           break;
         case "cod":
           apiEndpoint = "/api/manage-my-order/cod";
-          requestBody = {
-            orderId: order._id,
-            customerInfo,
-          };
+          requestBody = basePayload;
           break;
         default:
           throw new Error("Invalid payment method selected");
       }
-
-      console.log(`Sending request to ${apiEndpoint} with data:`, requestBody);
 
       const response = await fetch(apiEndpoint, {
         method: "POST",
@@ -180,47 +126,22 @@ const PaymentPage = () => {
         body: JSON.stringify(requestBody),
       });
 
-      console.log("API Response Status:", response.status);
-      const responseText = await response.text();
-      console.log("API Response Body (raw):", responseText);
-
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error("Failed to parse API response as JSON:", parseError);
-        throw new Error("Server returned an invalid response.");
-      }
+      const data = await response.json();
 
       if (data.success) {
-        if (paymentMethod === "sslcommerz") {
+        if (paymentMethod === "bkash" || paymentMethod === "nagad") {
+          // Redirect to bKash/Nagad gateway
           window.location.href = data.paymentUrl;
         } else if (paymentMethod === "cod") {
+          // Redirect to success page for Cash on Delivery
           router.push(`/order-confirmation?orderId=${order._id}`);
-        } else {
-          // For other payment methods, redirect to their respective payment pages
-          window.location.href = data.paymentUrl;
         }
       } else {
-        // Improved error handling for payment gateway specific errors
-        let errorMessage = data.message || "Payment initiation failed.";
-
-        if (
-          errorMessage.includes("Store Credential Error") ||
-          errorMessage.includes("Store is De-active")
-        ) {
-          errorMessage =
-            "Payment gateway credentials are invalid. Please use Cash on Delivery or contact support.";
-        }
-
-        throw new Error(errorMessage);
+        throw new Error(data.message || "Payment initiation failed.");
       }
     } catch (err) {
       console.error("Error processing payment:", err);
-      setError(
-        err.message ||
-          "Failed to process payment. Please check your information and try again.",
-      );
+      setError(err.message);
     } finally {
       setIsProcessing(false);
     }
@@ -244,8 +165,8 @@ const PaymentPage = () => {
             <p className="text-sm mt-2">Order ID: {orderId}</p>
           </div>
           <button
-            onClick={() => router.push("/cart")}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onClick={() => router.push("/manage-add-to-cart")}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
             Back to Cart
           </button>
@@ -259,7 +180,7 @@ const PaymentPage = () => {
       <div className="max-w-2xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-6">
           <button
-            onClick={() => router.push("/cart")}
+            onClick={() => router.push("/manage-add-to-cart")}
             className="inline-flex items-center text-blue-600 hover:text-blue-700"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -299,64 +220,56 @@ const PaymentPage = () => {
                     <p>{error}</p>
                   </div>
                   <div className="mt-4">
-                    <div className="-mx-2 -my-1.5 flex">
-                      <button
-                        type="button"
-                        className="ml-3 bg-red-50 px-3 py-1.5 rounded-md text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600"
-                        onClick={() => setError(null)}
-                      >
-                        Dismiss
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      className="bg-red-50 px-3 py-1.5 rounded-md text-sm font-medium text-red-800 hover:bg-red-100"
+                      onClick={() => setError(null)}
+                    >
+                      Dismiss
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          <form onSubmit={handlePayment} className="space-y-6">
-            {/* Payment Method Selection */}
+          <form onSubmit={handlePayment} className="space-y-8">
+            {/* Delivery Method Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Delivery Method
+              </h3>
+              <div className="space-y-3">
+                <label className="flex items-center p-4 border rounded-md cursor-pointer hover:bg-gray-50 border-blue-200 bg-blue-50">
+                  <input
+                    type="radio"
+                    name="deliveryMethod"
+                    value="steadfast"
+                    checked={deliveryMethod === "steadfast"}
+                    onChange={(e) => setDeliveryMethod(e.target.value)}
+                    className="mr-3 text-blue-600 focus:ring-blue-500"
+                  />
+                  <Package className="h-5 w-5 mr-3 text-orange-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      Steadfast Courier
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Fast and reliable home delivery inside Bangladesh
+                    </p>
+                  </div>
+                </label>
+                {/* You can add more delivery methods here if needed */}
+              </div>
+            </div>
+
+            {/* Payment Method Section */}
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 Payment Method
               </h3>
               <div className="space-y-3">
-                <label className="flex items-center p-4 border rounded-md cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="cod"
-                    checked={paymentMethod === "cod"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="mr-3"
-                  />
-                  <Truck className="h-5 w-5 mr-2 text-green-600" />
-                  <div>
-                    <p className="font-medium">Cash on Delivery</p>
-                    <p className="text-sm text-gray-500">
-                      Pay when you receive your order
-                    </p>
-                  </div>
-                </label>
-                <label className="flex items-center p-4 border rounded-md cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="sslcommerz"
-                    checked={paymentMethod === "sslcommerz"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="mr-3"
-                  />
-                  <CreditCard className="h-5 w-5 mr-2 text-blue-600" />
-                  <div>
-                    <p className="font-medium">
-                      Credit/Debit Card (SSLCommerz)
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Pay with Visa, Mastercard, or other cards
-                    </p>
-                  </div>
-                </label>
+                {/* bKash */}
                 <label className="flex items-center p-4 border rounded-md cursor-pointer hover:bg-gray-50">
                   <input
                     type="radio"
@@ -374,23 +287,8 @@ const PaymentPage = () => {
                     </p>
                   </div>
                 </label>
-                <label className="flex items-center p-4 border rounded-md cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="rocket"
-                    checked={paymentMethod === "rocket"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="mr-3"
-                  />
-                  <Send className="h-5 w-5 mr-2 text-purple-600" />
-                  <div>
-                    <p className="font-medium">Rocket</p>
-                    <p className="text-sm text-gray-500">
-                      Mobile banking payment
-                    </p>
-                  </div>
-                </label>
+
+                {/* Nagad */}
                 <label className="flex items-center p-4 border rounded-md cursor-pointer hover:bg-gray-50">
                   <input
                     type="radio"
@@ -408,114 +306,138 @@ const PaymentPage = () => {
                     </p>
                   </div>
                 </label>
+
+                {/* Cash on Delivery */}
+                <label className="flex items-center p-4 border rounded-md cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="cod"
+                    checked={paymentMethod === "cod"}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="mr-3"
+                  />
+                  <Truck className="h-5 w-5 mr-2 text-green-600" />
+                  <div>
+                    <p className="font-medium">Cash on Delivery</p>
+                    <p className="text-sm text-gray-500">
+                      Pay when you receive your order
+                    </p>
+                  </div>
+                </label>
               </div>
             </div>
 
-            <h3 className="text-lg font-medium text-gray-900">
-              Billing Information
-            </h3>
+            {/* Billing Information */}
             <div>
-              <label
-                htmlFor="name"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Full Name
-              </label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                required
-                value={customerInfo.name}
-                onChange={handleInputChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Email Address
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                required
-                value={customerInfo.email}
-                onChange={handleInputChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="phone"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                required
-                value={customerInfo.phone}
-                onChange={handleInputChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="address"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Address
-              </label>
-              <input
-                type="text"
-                id="address"
-                name="address"
-                required
-                value={customerInfo.address}
-                onChange={handleInputChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="city"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  City
-                </label>
-                <input
-                  type="text"
-                  id="city"
-                  name="city"
-                  required
-                  value={customerInfo.city}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="country"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Country
-                </label>
-                <input
-                  type="text"
-                  id="country"
-                  name="country"
-                  required
-                  value={customerInfo.country}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                />
+              <h3 className="text-lg font-medium text-gray-900">
+                Billing Information
+              </h3>
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    required
+                    value={customerInfo.name}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    required
+                    value={customerInfo.email}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="phone"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    required
+                    value={customerInfo.phone}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="address"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Address
+                  </label>
+                  <input
+                    type="text"
+                    id="address"
+                    name="address"
+                    required
+                    value={customerInfo.address}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      htmlFor="city"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      id="city"
+                      name="city"
+                      required
+                      value={customerInfo.city}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="country"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      Country
+                    </label>
+                    <input
+                      type="text"
+                      id="country"
+                      name="country"
+                      required
+                      value={customerInfo.country}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -531,22 +453,10 @@ const PaymentPage = () => {
                 </>
               ) : (
                 <>
-                  {paymentMethod === "sslcommerz" && (
-                    <>
-                      <CreditCard className="h-5 w-5 mr-2" />
-                      Pay with SSLCommerz
-                    </>
-                  )}
                   {paymentMethod === "bkash" && (
                     <>
                       <Smartphone className="h-5 w-5 mr-2" />
                       Pay with bKash
-                    </>
-                  )}
-                  {paymentMethod === "rocket" && (
-                    <>
-                      <Send className="h-5 w-5 mr-2" />
-                      Pay with Rocket
                     </>
                   )}
                   {paymentMethod === "nagad" && (

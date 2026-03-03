@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
+// import { useCart } from "@/context/CartContext"; // Import useCart hook
 import {
   FaSearch,
   FaUser,
@@ -16,9 +17,12 @@ import {
   FaRegStar,
   FaSpinner,
 } from "react-icons/fa";
+import { useCart } from "@/app/context/CartContext";
 
 const TopNavbar = () => {
   const { data: session, status } = useSession();
+  const { cartCount } = useCart(); // Get cartCount from global context
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -29,7 +33,6 @@ const TopNavbar = () => {
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
   const [isMobileSearchFocused, setIsMobileSearchFocused] = useState(false);
 
   const pathname = usePathname();
@@ -40,7 +43,6 @@ const TopNavbar = () => {
   const categoryDropdownRef = useRef(null);
   const profileDropdownRef = useRef(null);
   const debounceTimerRef = useRef(null);
-  const hasFetchedCartRef = useRef(false);
   const hasFetchedProductsRef = useRef(false);
 
   // Helper function to safely format price
@@ -49,38 +51,8 @@ const TopNavbar = () => {
     return isNaN(numPrice) ? "0.00" : numPrice.toFixed(2);
   };
 
-  // Fetch cart count when component mounts
-  useEffect(() => {
-    const fetchCartCount = async () => {
-      if (hasFetchedCartRef.current) return;
-      hasFetchedCartRef.current = true;
-
-      try {
-        const userId =
-          localStorage.getItem("userId") || "guest-user-" + Date.now();
-
-        const response = await fetch(`/api/cart?userId=${userId}`);
-
-        if (!response.ok) {
-          console.error("Cart API error:", response.status);
-          return;
-        }
-
-        const data = await response.json();
-        if (data.success && data.data) {
-          const totalItems = data.data.reduce(
-            (total, item) => total + item.quantity,
-            0,
-          );
-          setCartCount(totalItems);
-        }
-      } catch (error) {
-        console.error("Error fetching cart count:", error);
-      }
-    };
-
-    fetchCartCount();
-  }, []);
+  // NOTE: We removed the local cart fetching logic here.
+  // The 'cartCount' now comes directly from the CartContext (useCart).
 
   // Fetch all products when component mounts
   useEffect(() => {
@@ -273,7 +245,6 @@ const TopNavbar = () => {
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/all-products", label: "All Products" },
-    { href: "/deals", label: "Deals" },
     { href: "/about-us", label: "About" },
     { href: "/manage-add-to-cart", label: "Cart" },
   ];
@@ -295,8 +266,8 @@ const TopNavbar = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex-shrink-0">
               <Link href="/" className="flex items-center">
-                <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  YourBrand
+                <span className="text-2xl  font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                  Dilodoor
                 </span>
               </Link>
             </div>

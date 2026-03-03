@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+// import { useCart } from "@/context/CartContext"; // 1. Import useCart
 import {
   Star,
   ShoppingCart,
@@ -14,21 +15,19 @@ import {
   Minus,
   Plus,
   Check,
-  X,
   ZoomIn,
   Share2,
   ChevronDown,
   ChevronUp,
   Package,
-  Clock,
-  Award,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { useCart } from "@/app/context/CartContext";
 
 const ProductDetails = () => {
+  const { addToCart } = useCart(); // 2. Get addToCart function from context
   const [product, setProduct] = useState(null);
-  // const [debugProduct, setDebugProduct] = useState(null); // Debug state
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -92,14 +91,13 @@ const ProductDetails = () => {
         }
 
         setProduct(foundProduct);
-        // setDebugProduct(JSON.stringify(foundProduct, null, 2)); // Debug info
 
         // Fetch all products to find related ones
         const allProductsResponse = await fetch("/api/products");
         if (allProductsResponse.ok) {
           const allProductsData = await allProductsResponse.json();
 
-          let allProducts = []; // Changed from const to let
+          let allProducts = [];
           if (allProductsData.success && Array.isArray(allProductsData.data)) {
             allProducts = allProductsData.data;
           }
@@ -108,7 +106,8 @@ const ProductDetails = () => {
           const related = allProducts
             .filter(
               (p) =>
-                p.category === foundProduct.category && p.id !== foundProduct.id
+                p.category === foundProduct.category &&
+                p.id !== foundProduct.id,
             )
             .slice(0, 8);
 
@@ -133,10 +132,8 @@ const ProductDetails = () => {
 
         // Ensure productId is properly encoded for API call
         const encodedProductId = encodeURIComponent(params.id);
-        console.log("Fetching reviews for productId:", encodedProductId);
-
         const reviewsResponse = await fetch(
-          `/api/reviews?productId=${encodedProductId}`
+          `/api/reviews?productId=${encodedProductId}`,
         );
 
         if (!reviewsResponse.ok) {
@@ -144,7 +141,6 @@ const ProductDetails = () => {
         }
 
         const reviewsData = await reviewsResponse.json();
-        console.log("Reviews API response:", reviewsData);
 
         if (reviewsData.success && reviewsData.data) {
           setReviews(reviewsData.data);
@@ -179,7 +175,7 @@ const ProductDetails = () => {
     rating,
     interactive = false,
     onChange = null,
-    size = "normal"
+    size = "normal",
   ) => {
     const starSize = size === "small" ? "w-4 h-4" : "w-5 h-5";
 
@@ -202,33 +198,13 @@ const ProductDetails = () => {
     );
   };
 
-  // Update handleAddToCart function
+  // 3. Updated handleAddToCart to use Context
   const handleAddToCart = async () => {
+    if (!product || product.stock === 0) return;
+
     setIsAddingToCart(true);
     try {
-      // Get user ID from localStorage or context (for simplicity, using localStorage)
-      const userId =
-        localStorage.getItem("userId") || "guest-user-" + Date.now();
-      localStorage.setItem("userId", userId);
-
-      const response = await fetch("/api/cart", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          productId: product.id,
-          quantity,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to add to cart");
-      }
-
+      await addToCart(product, quantity); // Use context function
       showNotification("Product added to cart!");
     } catch (error) {
       console.error("Error adding to cart:", error);
@@ -246,12 +222,6 @@ const ProductDetails = () => {
         localStorage.getItem("userId") || "guest-user-" + Date.now();
       localStorage.setItem("userId", userId);
 
-      // Debug: Log the product data
-      console.log("Product data:", product);
-      console.log("Product ID:", product.id);
-      console.log("Product _id:", product._id);
-
-      // Make sure we have a valid product ID
       const productId = product._id || product.id;
       if (!productId) {
         throw new Error("Invalid product ID");
@@ -267,7 +237,7 @@ const ProductDetails = () => {
           userId,
           items: [
             {
-              productId: productId, // Make sure this is a string
+              productId: productId,
               quantity,
               price: product.finalPrice || product.price,
             },
@@ -275,53 +245,24 @@ const ProductDetails = () => {
         }),
       });
 
-      console.log("Response status:", response.status);
-      console.log("Response headers:", response.headers);
-
-      // Check if response is ok and has content
       if (!response.ok) {
-        // Try to get error message from response
         let errorMessage = `Failed to create order (${response.status})`;
         try {
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-          } else {
-            const errorText = await response.text();
-            errorMessage = errorText || errorMessage;
-          }
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
         } catch (e) {
-          // If we can't parse the response, use status text
-          errorMessage = response.statusText || errorMessage;
+          // Ignore parsing error
         }
         throw new Error(errorMessage);
       }
 
-      // Check if response has content before parsing JSON
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Invalid response from server");
-      }
+      const data = await response.json();
 
-      // Now parse JSON
-      let data;
-      try {
-        data = await response.json();
-      } catch (parseError) {
-        console.error("Error parsing JSON:", parseError);
-        throw new Error("Invalid response format from server");
-      }
-
-      console.log("Order created successfully:", data);
-
-      // Check if data is valid
-      if (!data || !data.success || !data.data || !data.data._id) {
+      if (data && data.success && data.data && data.data._id) {
+        router.push(`/payment?orderId=${data.data._id}`);
+      } else {
         throw new Error("Invalid order data received");
       }
-
-      // Redirect to payment page with the order ID
-      router.push(`/payment?orderId=${data.data._id}`);
     } catch (error) {
       console.error("Error creating order:", error);
       showNotification(error.message || "Failed to create order");
@@ -341,12 +282,12 @@ const ProductDetails = () => {
   const toggleWishlist = () => {
     setIsWishlist(!isWishlist);
     showNotification(
-      isWishlist ? "Removed from wishlist" : "Added to wishlist"
+      isWishlist ? "Removed from wishlist" : "Added to wishlist",
     );
   };
 
   const showNotification = (message) => {
-    // Create a simple notification (in a real app, you'd use a toast library)
+    // Create a simple notification
     const notification = document.createElement("div");
     notification.className =
       "fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg z-50 animate-fade-in";
@@ -376,7 +317,7 @@ const ProductDetails = () => {
       reader.onloadend = () => {
         setReviewForm((prev) => ({
           ...prev,
-          profileImage: reader.result, // Store as base64 for upload
+          profileImage: reader.result,
           profileImagePreview: reader.result,
         }));
       };
@@ -389,7 +330,6 @@ const ProductDetails = () => {
     setIsSubmittingReview(true);
 
     try {
-      // Prepare review data
       const reviewData = {
         productId: params.id,
         name: reviewForm.name,
@@ -397,10 +337,9 @@ const ProductDetails = () => {
         rating: reviewForm.rating,
         title: reviewForm.title,
         comment: reviewForm.comment,
-        profileImage: reviewForm.profileImage, // Send to base64 image
+        profileImage: reviewForm.profileImage,
       };
 
-      // Submit review to API
       const response = await fetch("/api/reviews", {
         method: "POST",
         headers: {
@@ -416,11 +355,10 @@ const ProductDetails = () => {
 
       const result = await response.json();
 
-      // Add new review to list
       const newReview = {
         _id: result.data._id,
         name: reviewForm.name,
-        profileImage: result.data.profileImage, // Use URL returned from ImgBB
+        profileImage: result.data.profileImage,
         rating: reviewForm.rating,
         title: reviewForm.title,
         comment: reviewForm.comment,
@@ -429,11 +367,8 @@ const ProductDetails = () => {
       };
 
       setReviews((prev) => [newReview, ...prev]);
-
-      // Update total pages
       setTotalPages(Math.ceil((reviews.length + 1) / reviewsPerPage));
 
-      // Reset form
       setReviewForm({
         name: "",
         email: "",
@@ -450,7 +385,7 @@ const ProductDetails = () => {
 
       showNotification("Thank you for your review!");
 
-      // Refresh product data to get updated rating
+      // Refresh product data
       try {
         const productResponse = await fetch(`/api/products/${params.id}`);
         if (productResponse.ok) {
@@ -476,12 +411,10 @@ const ProductDetails = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   const prevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
 
-  // Calculate current reviews to display
   const indexOfLastReview = currentPage * reviewsPerPage;
   const indexOfFirstReview = indexOfLastReview - reviewsPerPage;
   const currentReviews = reviews.slice(indexOfFirstReview, indexOfLastReview);
 
-  // Format date function
   const formatDate = (dateString) => {
     const options = { year: "numeric", month: "long", day: "numeric" };
     return new Date(dateString).toLocaleDateString(undefined, options);
@@ -511,14 +444,22 @@ const ProductDetails = () => {
     );
   }
 
-  // Create product images array using actual image URL from product
-  const productImages = [
+  // ============================================================
+  // FIX: Correct logic for handling images
+  // ============================================================
+  const fallbackImages = [
     product.imageUrl ||
       `https://picsum.photos/seed/${product.id}-main/800/800.jpg`,
     `https://picsum.photos/seed/${product.id}-alt1/800/800.jpg`,
     `https://picsum.photos/seed/${product.id}-alt2/800/800.jpg`,
     `https://picsum.photos/seed/${product.id}-alt3/800/800.jpg`,
   ];
+
+  const productImages =
+    product.imageUrls && product.imageUrls.length > 0
+      ? product.imageUrls
+      : fallbackImages;
+  // ============================================================
 
   return (
     <div className="bg-gray-50">
@@ -568,19 +509,16 @@ const ProductDetails = () => {
                 priority
               />
 
-              {/* Zoom indicator */}
               <div className="absolute top-4 right-4 bg-white rounded-full p-2 shadow-md opacity-0 hover:opacity-100 transition-opacity">
                 <ZoomIn className="h-5 w-5 text-gray-700" />
               </div>
 
-              {/* Discount badge */}
               {product.discount > 0 && (
                 <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-md text-sm font-bold">
                   -{product.discount}% OFF
                 </div>
               )}
 
-              {/* Wishlist button */}
               <button
                 onClick={toggleWishlist}
                 className="absolute bottom-4 right-4 bg-white rounded-full p-2 shadow-md"
@@ -592,13 +530,11 @@ const ProductDetails = () => {
                 />
               </button>
 
-              {/* Share button */}
               <button className="absolute bottom-4 left-4 bg-white rounded-full p-2 shadow-md">
                 <Share2 className="h-5 w-5 text-gray-700" />
               </button>
             </div>
 
-            {/* Thumbnail images */}
             <div className="flex space-x-2 overflow-x-auto pb-2">
               {productImages.map((img, index) => (
                 <button
@@ -633,7 +569,6 @@ const ProductDetails = () => {
               </h1>
             </div>
 
-            {/* Rating and Reviews */}
             <div className="flex items-center space-x-4">
               <div className="flex items-center">
                 {renderStars(product.rating || 0)}
@@ -647,7 +582,6 @@ const ProductDetails = () => {
               </div>
             </div>
 
-            {/* Price */}
             <div className="flex items-baseline space-x-3">
               <span className="text-3xl font-bold text-gray-900">
                 ${product.finalPrice || product.price}
@@ -664,13 +598,11 @@ const ProductDetails = () => {
               )}
             </div>
 
-            {/* Description */}
             <div>
               <h3 className="text-lg font-semibold mb-2">Description</h3>
               <p className="text-gray-600">{product.description}</p>
             </div>
 
-            {/* Stock Status */}
             <div className="flex items-center space-x-2">
               {product.stock > 0 ? (
                 <>
@@ -687,7 +619,6 @@ const ProductDetails = () => {
               )}
             </div>
 
-            {/* Product Options */}
             {product.sizes && product.sizes.length > 0 && (
               <div>
                 <h3 className="text-lg font-semibold mb-2">Size</h3>
@@ -700,13 +631,12 @@ const ProductDetails = () => {
                       >
                         {size}
                       </button>
-                    )
+                    ),
                   )}
                 </div>
               </div>
             )}
 
-            {/* Color Options */}
             {product.color && (
               <div>
                 <h3 className="text-lg font-semibold mb-2">Color</h3>
@@ -720,7 +650,6 @@ const ProductDetails = () => {
               </div>
             )}
 
-            {/* Quantity and Actions */}
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
                 <span className="font-medium">Quantity:</span>
@@ -762,17 +691,10 @@ const ProductDetails = () => {
               </div>
             </div>
 
-            {/* Product Features - WITH SAFETY CHECK */}
             {product.features && (
               <div>
                 <h3 className="text-lg font-semibold mb-2">Key Features</h3>
                 <ul className="space-y-2">
-                  {/* 
-                    Handle different data types for features:
-                    1. If it's an array, map over it
-                    2. If it's a string, split by comma and map
-                    3. If it's an object with 'items', map over items
-                  */}
                   {Array.isArray(product.features) ? (
                     product.features.map((feature, index) => (
                       <li key={index} className="flex items-start space-x-2">
@@ -797,7 +719,6 @@ const ProductDetails = () => {
               </div>
             )}
 
-            {/* Shipping & Returns */}
             <div className="border-t pt-6 space-y-4">
               <h3 className="text-lg font-semibold mb-4">Shipping & Returns</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -844,14 +765,6 @@ const ProductDetails = () => {
           </div>
         </div>
 
-        {/* Debug Information - REMOVE IN PRODUCTION */}
-        {/* {debugProduct && (
-          <div className="bg-yellow-100 p-4 mb-4 rounded">
-            <h3>Debug Product Data:</h3>
-            <pre className="text-xs overflow-auto">{debugProduct}</pre>
-          </div>
-        )} */}
-
         {/* Product Details Tabs */}
         <div className="mt-16">
           <div className="border-b border-gray-200">
@@ -869,7 +782,7 @@ const ProductDetails = () => {
                   >
                     {tab}
                   </button>
-                )
+                ),
               )}
             </nav>
           </div>
@@ -946,7 +859,6 @@ const ProductDetails = () => {
                   </div>
                 </div>
 
-                {/* Expandable specifications */}
                 <div className="mt-4">
                   <button
                     onClick={() => setExpandedSpecs(!expandedSpecs)}
@@ -1000,21 +912,19 @@ const ProductDetails = () => {
             )}
             {activeTab === "reviews" && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Review Summary */}
                 <div className="lg:col-span-1">
                   <div className="bg-white rounded-lg shadow-sm p-6">
                     <h3 className="text-lg font-semibold mb-4">
                       Customer Reviews
                     </h3>
 
-                    {/* Average Rating */}
                     <div className="text-center mb-6">
                       <div className="text-4xl font-bold text-gray-900">
                         {reviews.length > 0
                           ? (
                               reviews.reduce(
                                 (sum, review) => sum + review.rating,
-                                0
+                                0,
                               ) / reviews.length
                             ).toFixed(1)
                           : "0.0"}
@@ -1024,8 +934,8 @@ const ProductDetails = () => {
                           ? renderStars(
                               reviews.reduce(
                                 (sum, review) => sum + review.rating,
-                                0
-                              ) / reviews.length
+                                0,
+                              ) / reviews.length,
                             )
                           : renderStars(0)}
                       </div>
@@ -1034,12 +944,11 @@ const ProductDetails = () => {
                       </p>
                     </div>
 
-                    {/* Rating Breakdown */}
                     {reviews.length > 0 && (
                       <div className="space-y-2">
                         {[5, 4, 3, 2, 1].map((rating) => {
                           const count = reviews.filter(
-                            (r) => r.rating === rating
+                            (r) => r.rating === rating,
                           ).length;
                           const percentage =
                             reviews.length > 0
@@ -1067,9 +976,7 @@ const ProductDetails = () => {
                   </div>
                 </div>
 
-                {/* Reviews List and Form */}
                 <div className="lg:col-span-2 space-y-8">
-                  {/* Review Form */}
                   <div className="bg-white rounded-lg shadow-sm p-6">
                     <h3 className="text-lg font-semibold mb-4">
                       Write a Review
@@ -1117,7 +1024,7 @@ const ProductDetails = () => {
                           Rating
                         </label>
                         {renderStars(reviewForm.rating, true, (rating) =>
-                          setReviewForm((prev) => ({ ...prev, rating }))
+                          setReviewForm((prev) => ({ ...prev, rating })),
                         )}
                       </div>
 
@@ -1193,7 +1100,6 @@ const ProductDetails = () => {
                     </form>
                   </div>
 
-                  {/* Reviews List with Pagination */}
                   <div className="bg-white rounded-lg shadow-sm p-6">
                     <div className="flex justify-between items-center mb-6">
                       <h3 className="text-lg font-semibold">
@@ -1249,7 +1155,7 @@ const ProductDetails = () => {
                                       review.rating,
                                       false,
                                       null,
-                                      "small"
+                                      "small",
                                     )}
                                     {review.verified && (
                                       <div className="ml-2 flex items-center text-xs text-green-600">
@@ -1270,7 +1176,6 @@ const ProductDetails = () => {
                           ))}
                         </div>
 
-                        {/* Pagination */}
                         {totalPages > 1 && (
                           <div className="flex items-center justify-between mt-8">
                             <div className="text-sm text-gray-700">
@@ -1292,7 +1197,7 @@ const ProductDetails = () => {
                               <div className="flex space-x-1">
                                 {Array.from(
                                   { length: totalPages },
-                                  (_, i) => i + 1
+                                  (_, i) => i + 1,
                                 ).map((pageNumber) => (
                                   <button
                                     key={pageNumber}
@@ -1384,7 +1289,7 @@ const ProductDetails = () => {
                           relatedProduct.rating || 0,
                           false,
                           null,
-                          "small"
+                          "small",
                         )}
                         <span className="ml-1 text-xs text-gray-600">
                           ({relatedProduct.rating || 0})
@@ -1407,12 +1312,14 @@ const ProductDetails = () => {
                             </span>
                           )}
                         </div>
+                        {/* 4. Updated Related Products Add to Cart */}
                         <button
                           className="p-1.5 rounded-full bg-blue-500 text-white hover:bg-blue-600 focus:outline-none transition-colors"
                           onClick={(e) => {
                             e.preventDefault();
+                            addToCart(relatedProduct, 1);
                             showNotification(
-                              `Added ${relatedProduct.name} to cart`
+                              `Added ${relatedProduct.name} to cart`,
                             );
                           }}
                         >

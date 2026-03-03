@@ -194,7 +194,7 @@ function TopNavbar() {
             {/* Logo */}
             <Link href="/" className="flex-shrink-0">
               <span className="text-2xl font-bold text-indigo-600">
-                YourStore
+                Dilodoor
               </span>
             </Link>
 
@@ -229,12 +229,6 @@ function TopNavbar() {
                 )}
               </div>
 
-              <Link
-                href="/deals"
-                className="text-gray-700 hover:text-indigo-600 px-3 py-2 text-sm font-medium"
-              >
-                Deals
-              </Link>
               <Link
                 href="/about"
                 className="text-gray-700 hover:text-indigo-600 px-3 py-2 text-sm font-medium"
@@ -422,14 +416,7 @@ function TopNavbar() {
                 <FaBox className="inline mr-2" />
                 All Products
               </Link>
-              <Link
-                href="/deals"
-                className="block px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <FaPercent className="inline mr-2" />
-                Deals
-              </Link>
+
               <Link
                 href="/about"
                 className="block px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md"

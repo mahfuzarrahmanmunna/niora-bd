@@ -5,6 +5,7 @@ import BottomNavbar from "@/app/components/BottomNavbar/BottomNavbar";
 import SearchBar from "@/app/components/SearchBar/page";
 import TopNavbar from "@/app/components/TopNavbar/TopNavbar";
 import { usePathname } from "next/navigation";
+import WhatsAppButton from "@/app/components/WhatsAppButton/WhatsAppButton";
 // import BottomNavbar from "./components/BottomNavbar/BottomNavbar";
 // import SearchBar from "./components/SearchBar/page";
 // import TopNavbar from "./components/TopNavbar/TopNavbar";
@@ -14,7 +15,7 @@ export default function LayoutContent({ children }) {
   const isDashboard = pathname.startsWith("/dashboard");
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 text-gray-900 mb-12">
+    <div className="min-h-screen flex flex-col bg-gray-100 text-gray-900">
       <main className="flex-grow">
         {/* MOBILE SEARCH BAR: Visible only on small screens and not on dashboard */}
         {!isDashboard && (
@@ -31,7 +32,7 @@ export default function LayoutContent({ children }) {
             </Suspense>
           </div>
         )}
-
+        <WhatsAppButton />
         {/* CONTENT WRAPPER: Provides padding and a card-like background for content */}
         <div className="">
           <div className="">{children}</div>

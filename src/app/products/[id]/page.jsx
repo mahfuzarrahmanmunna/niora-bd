@@ -55,7 +55,7 @@ const ProductDetails = () => {
   });
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const params = useParams();
-
+  console.log(product);
   // Get or create user ID
   const getUserId = () => {
     if (typeof window === "undefined") return null;

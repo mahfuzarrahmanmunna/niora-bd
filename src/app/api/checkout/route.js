@@ -1,140 +1,204 @@
-// src/app/api/checkout/route.js
-import { NextResponse } from 'next/server';
-import { dbConnect } from '@/lib/dbConnect';
-import { ObjectId } from 'mongodb';
+import { NextResponse } from "next/server";
+import { dbConnect } from "@/lib/dbConnect";
+import { ObjectId } from "mongodb";
 
-// POST to process checkout
 export async function POST(request) {
-    try {
-        const { userId, items, shippingAddress, paymentMethod } = await request.json();
-        
-        if (!userId || !items || items.length === 0) {
-            return NextResponse.json(
-                { success: false, message: 'User ID and items are required' },
-                { status: 400 }
-            );
-        }
+  try {
+    const body = await request.json();
+    const { userId, items, shippingAddress, paymentMethod } = body;
 
-        // Get product details and check stock
-        const productsCollection = await dbConnect('products');
-        const products = await Promise.all(
-            items.map(async (item) => {
-                // FIX: Query by the custom 'id' field, NOT the '_id' field.
-                // The 'productId' from the cart is a string, not a MongoDB ObjectId.
-                const product = await productsCollection.findOne({ id: item.productId });
-                return {
-                    ...item,
-                    product
-                };
-            })
-        );
+    console.log("--- Checkout Request ---");
+    console.log("User ID:", userId);
+    console.log("Items Count:", items?.length);
 
-        // Check if all products are available and have enough stock
-        for (const item of products) {
-            if (!item.product) {
-                return NextResponse.json(
-                    { success: false, message: `Product with ID ${item.productId} not found` },
-                    { status: 404 }
-                );
-            }
-            
-            if (item.product.stock < item.quantity) {
-                return NextResponse.json(
-                    { success: false, message: `Not enough stock for ${item.product.name}` },
-                    { status: 400 }
-                );
-            }
-        }
-
-        // Calculate total price
-        const totalPrice = products.reduce((total, item) => {
-            const price = item.product.discount && item.product.discount > 0 
-                ? item.product.finalPrice || item.product.price * (1 - item.product.discount)
-                : item.product.price;
-            return total + (price * item.quantity);
-        }, 0);
-
-        // Create order
-        const order = {
-            userId,
-            items: products.map(item => ({
-                productId: item.productId,
-                name: item.product.name,
-                price: item.product.discount && item.product.discount > 0 
-                    ? item.product.finalPrice || item.product.price * (1 - item.product.discount)
-                    : item.product.price,
-                quantity: item.quantity,
-                imageUrl: item.product.imageUrl
-            })),
-            shippingAddress: shippingAddress || null,
-            paymentMethod: paymentMethod || null,
-            totalPrice,
-            status: 'processing',
-            createdAt: new Date(),
-            updatedAt: new Date()
-        };
-
-        const ordersCollection = await dbConnect('orders');
-        const result = await ordersCollection.insertOne(order);
-
-        // Update product stock
-        for (const item of products) {
-            await productsCollection.updateOne(
-                { _id: item.product._id }, // Use the actual MongoDB _id for the update
-                { $inc: { stock: -item.quantity } }
-            );
-        }
-
-        // Remove items from cart
-        const cartCollection = await dbConnect('cart');
-        const productIds = items.map(item => item.productId);
-        await cartCollection.deleteMany({ 
-            userId, 
-            productId: { $in: productIds } 
-        });
-
-        return NextResponse.json(
-            { 
-                success: true, 
-                message: 'Order placed successfully',
-                orderId: result.insertedId.toString()
-            },
-            { status: 201 }
-        );
-    } catch (error) {
-        console.error('Error processing checkout:', error);
-        return NextResponse.json(
-            { success: false, message: 'Failed to process checkout', error: error.message },
-            { status: 500 }
-        );
+    if (!userId || !items || items.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "User ID and items are required" },
+        { status: 400 },
+      );
     }
+
+    const productsCollection = await dbConnect("products");
+
+    // 1. Fetch Products and Validate
+    const products = await Promise.all(
+      items.map(async (item) => {
+        let query = {};
+
+        // Robust ID Querying
+        if (ObjectId.isValid(item.productId) && item.productId.length === 24) {
+          try {
+            query = { _id: new ObjectId(item.productId) };
+          } catch (e) {
+            query = { id: item.productId };
+          }
+        } else {
+          query = { id: item.productId };
+        }
+
+        const product = await productsCollection.findOne(query);
+
+        if (!product) {
+          console.error(`Product NOT FOUND for ID: ${item.productId}`);
+          throw new Error(`Product with ID ${item.productId} not found`);
+        }
+
+        return {
+          ...item,
+          product,
+        };
+      }),
+    );
+
+    // 2. Check Stock and Calculate Price
+    let totalPrice = 0;
+
+    for (const item of products) {
+      const stock = parseInt(item.product.stock) || 0;
+      const requestedQty = parseInt(item.quantity) || 1;
+
+      if (stock < requestedQty) {
+        throw new Error(`Not enough stock for ${item.product.name}`);
+      }
+
+      // Safe Price Calculation
+      let itemPrice = parseFloat(item.product.price) || 0;
+      const discount = parseFloat(item.product.discount) || 0;
+
+      // Check if finalPrice exists and is valid, otherwise calculate
+      if (
+        item.product.finalPrice &&
+        !isNaN(parseFloat(item.product.finalPrice))
+      ) {
+        itemPrice = parseFloat(item.product.finalPrice);
+      } else if (discount > 0) {
+        // Assuming discount is a percentage (e.g., 10 means 10%)
+        itemPrice = itemPrice * (1 - discount / 100);
+      }
+
+      totalPrice += itemPrice * requestedQty;
+    }
+
+    console.log("Calculated Total Price:", totalPrice);
+
+    // 3. Create Order Object
+    const order = {
+      userId,
+      items: products.map((item) => {
+        let price = parseFloat(item.product.price) || 0;
+        const discount = parseFloat(item.product.discount) || 0;
+        let finalPrice = price;
+
+        if (
+          item.product.finalPrice &&
+          !isNaN(parseFloat(item.product.finalPrice))
+        ) {
+          finalPrice = parseFloat(item.product.finalPrice);
+        } else if (discount > 0) {
+          finalPrice = price * (1 - discount / 100);
+        }
+
+        return {
+          productId: item.productId,
+          name: item.product.name,
+          price: finalPrice,
+          quantity: parseInt(item.quantity) || 1,
+          imageUrl: item.product.imageUrls?.[0] || item.product.imageUrl,
+        };
+      }),
+      shippingAddress: shippingAddress || null,
+      paymentMethod: paymentMethod || "cod",
+      totalPrice,
+      status: "processing",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // 4. Insert Order into Database
+    const ordersCollection = await dbConnect("orders");
+    const result = await ordersCollection.insertOne(order);
+
+    if (!result.insertedId) {
+      throw new Error("Failed to save order to database");
+    }
+
+    console.log("Order Created ID:", result.insertedId);
+
+    // 5. Update Product Stock
+    for (const item of products) {
+      const qty = parseInt(item.quantity) || 1;
+      await productsCollection.updateOne(
+        { _id: item.product._id },
+        { $inc: { stock: -qty } },
+      );
+    }
+    console.log("Stock updated.");
+
+    // 6. Clear User's Cart
+    try {
+      const cartCollection = await dbConnect("cart");
+      const productIds = items.map((item) => item.productId);
+      await cartCollection.deleteMany({
+        userId,
+        productId: { $in: productIds },
+      });
+      console.log("Cart cleared.");
+    } catch (cartErr) {
+      console.error("Error clearing cart (non-fatal):", cartErr);
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Order placed successfully",
+        orderId: result.insertedId.toString(),
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("=== CHECKOUT FATAL ERROR ===");
+    console.error(error.message);
+    console.error(error.stack);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: error.message || "Failed to process checkout",
+      },
+      { status: 500 },
+    );
+  }
 }
 
-// GET to retrieve order history
+// GET method for order history (unchanged)
 export async function GET(request) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const userId = searchParams.get('userId');
-        
-        if (!userId) {
-            return NextResponse.json(
-                { success: false, message: 'User ID is required' },
-                { status: 400 }
-            );
-        }
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
 
-        const collection = await dbConnect('orders');
-        const orders = await collection.find({ userId }).sort({ createdAt: -1 }).toArray();
-
-        return NextResponse.json(
-            { success: true, data: orders },
-            { status: 200 }
-        );
-    } catch (error) {
-        console.error('Error fetching orders:', error);
-        return NextResponse.json(
-            { success: false, message: 'Failed to fetch orders', error: error.message },
-            { status: 500 }
-        );
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, message: "User ID is required" },
+        { status: 400 },
+      );
     }
+
+    const collection = await dbConnect("orders");
+    const orders = await collection
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    return NextResponse.json({ success: true, data: orders }, { status: 200 });
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to fetch orders",
+        error: error.message,
+      },
+      { status: 500 },
+    );
+  }
 }

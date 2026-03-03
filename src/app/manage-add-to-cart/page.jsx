@@ -13,8 +13,11 @@ import {
   Shield,
   RefreshCw,
 } from "lucide-react";
+import { useCart } from "../context/CartContext";
 
 const CartPage = () => {
+  const { cartItems: contextCartItems, setCartItems: setContextCartItems } =
+    useCart();
   const [cartItems, setCartItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -22,6 +25,12 @@ const CartPage = () => {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const router = useRouter();
   const hasFetchedRef = useRef(false);
+
+  // Helper function to safely format price
+  const formatPrice = (price) => {
+    const numPrice = typeof price === "string" ? parseFloat(price) : price;
+    return isNaN(numPrice) ? "0.00" : numPrice.toFixed(2);
+  };
 
   // Get or create user ID
   const getUserId = () => {
@@ -52,7 +61,7 @@ const CartPage = () => {
     localStorage.setItem("cart", JSON.stringify(cart));
   };
 
-  // Find product by ID (checking multiple ID fields)
+  // Find product by ID
   const findProduct = (products, productId) => {
     return products.find(
       (p) =>
@@ -60,7 +69,7 @@ const CartPage = () => {
         p.id === productId ||
         p._id?.toString() === productId ||
         p.id?.toString() === productId ||
-        p.name === productId || // Fallback to name match
+        p.name === productId ||
         p.slug === productId,
     );
   };
@@ -74,9 +83,7 @@ const CartPage = () => {
         setIsLoading(true);
         setError(null);
 
-        // Get cart from localStorage
         const localCart = getLocalCart();
-        console.log("Local cart:", localCart);
 
         if (localCart.length === 0) {
           setCartItems([]);
@@ -84,24 +91,16 @@ const CartPage = () => {
           return;
         }
 
-        // Fetch all products
         const response = await fetch("/api/products");
         let allProducts = [];
         if (response.ok) {
           const data = await response.json();
           allProducts = data.data || [];
-          console.log("Fetched products:", allProducts.length);
         }
 
-        // Merge cart items with product details
         const cartWithProducts = localCart
           .map((cartItem) => {
             const product = findProduct(allProducts, cartItem.productId);
-            console.log(
-              `Looking for productId: ${cartItem.productId}, found:`,
-              product ? product.name : "NOT FOUND",
-            );
-
             return {
               ...cartItem,
               product: product || null,
@@ -109,9 +108,7 @@ const CartPage = () => {
           })
           .filter((item) => item.product !== null);
 
-        console.log("Cart with products:", cartWithProducts);
         setCartItems(cartWithProducts);
-
         setIsLoading(false);
       } catch (err) {
         console.error("Error loading cart:", err);
@@ -132,7 +129,6 @@ const CartPage = () => {
     try {
       setIsUpdating(true);
 
-      // Update localStorage
       const localCart = getLocalCart();
       const updatedCart = localCart.map((item) =>
         item.productId === productId
@@ -145,7 +141,6 @@ const CartPage = () => {
       );
       saveLocalCart(updatedCart);
 
-      // Update state
       setCartItems((prevItems) =>
         prevItems.map((item) =>
           item.productId === productId
@@ -154,7 +149,10 @@ const CartPage = () => {
         ),
       );
 
-      // Sync with API
+      if (setContextCartItems) {
+        setContextCartItems(updatedCart);
+      }
+
       const userId = getUserId();
       if (userId) {
         fetch("/api/cart", {
@@ -175,19 +173,20 @@ const CartPage = () => {
     try {
       setIsUpdating(true);
 
-      // Update localStorage
       const localCart = getLocalCart();
       const updatedCart = localCart.filter(
         (item) => item.productId !== productId,
       );
       saveLocalCart(updatedCart);
 
-      // Update state
       setCartItems((prevItems) =>
         prevItems.filter((item) => item.productId !== productId),
       );
 
-      // Sync with API
+      if (setContextCartItems) {
+        setContextCartItems(updatedCart);
+      }
+
       const userId = getUserId();
       if (userId) {
         fetch(`/api/cart?userId=${userId}&productId=${productId}`, {
@@ -205,8 +204,11 @@ const CartPage = () => {
   const calculateTotal = () => {
     return cartItems
       .reduce((total, item) => {
-        const price = item.product?.finalPrice || item.product?.price || 0;
-        return total + price * item.quantity;
+        // Ensure we parse strings to numbers for calculation
+        const price = parseFloat(
+          item.product?.finalPrice || item.product?.price || 0,
+        );
+        return total + (isNaN(price) ? 0 : price) * item.quantity;
       }, 0)
       .toFixed(2);
   };
@@ -227,11 +229,13 @@ const CartPage = () => {
         items: cartItems.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
+          // API calculates price, but sending it is fine
           price: item.product?.finalPrice || item.product?.price || 0,
         })),
       };
 
-      const response = await fetch("/api/checkout", {
+      // CHANGE: Using /api/manage-my-order as requested
+      const response = await fetch("/api/manage-my-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestData),
@@ -245,7 +249,12 @@ const CartPage = () => {
 
       // Clear cart
       saveLocalCart([]);
-      router.push(`/payment?orderId=${data.orderId}`);
+      if (setContextCartItems) {
+        setContextCartItems([]);
+      }
+
+      // FIX: Access the ID from data.data._id (based on your API response structure)
+      router.push(`/payment?orderId=${data.data._id}`);
     } catch (error) {
       console.error("Checkout error:", error);
       alert(error.message || "Failed to checkout");
@@ -349,6 +358,7 @@ const CartPage = () => {
                     <div className="w-24 h-24 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                       <Image
                         src={
+                          item.product?.imageUrls?.[0] ||
                           item.product?.imageUrl ||
                           `https://picsum.photos/seed/${item.productId}/200/200.jpg`
                         }
@@ -373,15 +383,15 @@ const CartPage = () => {
                         {item.product?.discount > 0 ? (
                           <>
                             <span className="font-bold">
-                              ${item.product.finalPrice?.toFixed(2)}
+                              ${formatPrice(item.product.finalPrice)}
                             </span>
                             <span className="text-sm text-gray-500 line-through ml-2">
-                              ${item.product.price?.toFixed(2)}
+                              ${formatPrice(item.product.price)}
                             </span>
                           </>
                         ) : (
                           <span className="font-bold">
-                            ${item.product?.price?.toFixed(2)}
+                            ${formatPrice(item.product?.price)}
                           </span>
                         )}
                       </div>

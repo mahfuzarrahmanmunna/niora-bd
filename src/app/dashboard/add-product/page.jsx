@@ -550,7 +550,7 @@ export default function AddProduct() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label>Sizes</Label>
-              <div className="grid grid-cols-5 gap-2 max-h-40 overflow-y-auto">
+              <div className="grid grid-cols-5 gap-2 max-h-40">
                 {shoeSizes.map((size) => (
                   <div key={size} className="flex items-center space-x-2">
                     <Checkbox
@@ -628,7 +628,7 @@ export default function AddProduct() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div className="min-h-screen bg-gray-50 p-6 overflow-auto">
+      <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-4xl mx-auto">
           <Card>
             <CardHeader>
