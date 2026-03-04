@@ -1,5 +1,3 @@
-// src/app/components/AllProducts/AllProducts.jsx
-
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
@@ -15,32 +13,26 @@ const AllProducts = () => {
   const [categoriesLoaded, setCategoriesLoaded] = useState(0);
   const [error, setError] = useState(null);
   const observer = useRef();
-  const router = useRouter(); // Initialize router
-  const categoriesPerLoad = 2; // Number of categories to load at a time
+  const router = useRouter();
+  const categoriesPerLoad = 2;
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setIsLoading(true);
-
-        // Fetch data from API
         const response = await fetch("/api/products");
         if (!response.ok) {
           throw new Error("Failed to fetch products");
         }
         const data = await response.json();
 
-        // Handle nested data structure
-        let allProducts = []; // Changed from const to let
+        let allProducts = [];
 
         if (data.success && Array.isArray(data.data)) {
-          // Use data.data directly if it's already an array of products
           allProducts = data.data;
         } else if (Array.isArray(data)) {
-          // If response itself is an array
           allProducts = data;
         } else if (data.data && Array.isArray(data.data)) {
-          // If data.data contains an array
           allProducts = data.data;
         } else {
           console.error("Unexpected API response format:", data);
@@ -159,16 +151,13 @@ const AllProducts = () => {
 
   // Handle product click (navigate to product details page)
   const handleProductClick = (product) => {
-    // Navigate to product details page
     router.push(`/product/${product.id}`);
   };
 
   // Handle add to cart
   const handleAddToCart = (e, product) => {
     e.stopPropagation();
-    // Add to cart functionality here
     console.log(`Added ${product.name} to cart`);
-    // You can update cart state or show a notification here
   };
 
   if (isLoading) {
@@ -228,11 +217,15 @@ const AllProducts = () => {
               >
                 <div className="relative">
                   <div className="w-full h-40 md:h-48 bg-gray-100 relative overflow-hidden">
-                    {/* Using Next.js Image component */}
+                    {/* UPDATED LOGIC: Use imageUrls[0] for real image */}
                     <Image
                       src={
-                        product.imageUrl ||
-                        `https://picsum.photos/seed/${product.id}/400/400.jpg`
+                        Array.isArray(product.imageUrls) &&
+                        product.imageUrls.length > 0
+                          ? product.imageUrls[0]
+                          : product.imageUrl
+                            ? product.imageUrl
+                            : `https://picsum.photos/seed/${product.id}/400/400.jpg`
                       }
                       alt={product.name}
                       fill

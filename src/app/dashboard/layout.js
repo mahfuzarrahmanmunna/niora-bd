@@ -44,7 +44,7 @@ const DashboardLayout = ({ children }) => {
     }
 
     if (session.user?.role !== "admin") {
-      router.push("/user-dashboard");
+      router.push("/dashboard");
       return;
     }
   }, [session, status, router]);

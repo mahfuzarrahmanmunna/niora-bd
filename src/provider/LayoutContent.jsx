@@ -17,31 +17,26 @@ export default function LayoutContent({ children }) {
   return (
     <div className="min-h-screen flex flex-col bg-gray-100 text-gray-900">
       <main className="flex-grow">
-        {/* MOBILE SEARCH BAR: Visible only on small screens and not on dashboard */}
-        {!isDashboard && (
-          <div className="md:hidden">
-            <SearchBar />
-          </div>
-        )}
-
         {/* TOP NAVBAR: Hidden on dashboard */}
         {!isDashboard && (
-          <div className="hidden md:flex mb-12">
-            <Suspense fallback={<div className="h-16 bg-white shadow-sm" />}>
+          <div className=" md:flex mb-16">
+            <Suspense
+              fallback={<div className="h-16 bg-white shadow-sm mb-6" />}
+            >
               <TopNavbar />
             </Suspense>
           </div>
         )}
         <WhatsAppButton />
         {/* CONTENT WRAPPER: Provides padding and a card-like background for content */}
-        <div className="">
+        <div className={`${!isDashboard && "my-16 md:my-20"}`}>
           <div className="">{children}</div>
         </div>
       </main>
 
       {/* MOBILE BOTTOM NAVBAR: Fixed at the bottom of the screen on mobile, but not on dashboard */}
       {!isDashboard && (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-lg bg-gray-300">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0  shadow-lg bg-gray-300">
           <BottomNavbar />
         </nav>
       )}

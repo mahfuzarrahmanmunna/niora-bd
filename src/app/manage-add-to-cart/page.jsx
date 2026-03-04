@@ -290,7 +290,7 @@ const CartPage = () => {
               Try Again
             </button>
             <Link
-              href="/products"
+              href="/all-products"
               className="px-4 py-2 bg-gray-500 text-white rounded"
             >
               Continue Shopping
@@ -316,7 +316,7 @@ const CartPage = () => {
               Looks like you have not added any products to your cart yet.
             </p>
             <Link
-              href="/products"
+              href="/all-products"
               className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
               Continue Shopping
