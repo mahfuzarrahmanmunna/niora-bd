@@ -43,8 +43,11 @@ const DashboardLayout = ({ children }) => {
       return;
     }
 
-    if (session.user?.role !== "admin") {
+    if (session.user?.role === "admin") {
       router.push("/dashboard");
+      return;
+    } else {
+      router.push("/");
       return;
     }
   }, [session, status, router]);
