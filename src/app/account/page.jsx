@@ -77,16 +77,6 @@ const MyAccountPage = () => {
                 Manage your shipping and billing addresses
               </p>
             </Link>
-
-            {/* <a
-              href="/account/wishlist"
-              className="block p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <h3 className="font-medium text-gray-900">My Wishlist</h3>
-              <p className="text-sm text-gray-600 mt-1">
-                View and manage your saved items
-              </p>
-            </a> */}
           </div>
         </div>
 

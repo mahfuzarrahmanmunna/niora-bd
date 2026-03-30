@@ -2,17 +2,26 @@
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
+import { fbq } from "@/lib/fpixel";
 
 // --- Sub-component: Product Card ---
 const ProductCard = ({ product, onAddToCart, index }) => {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
-  // --- STRICT IMAGE LOGIC ---
-  // 1. Check imageUrls array (Based on your log data)
-  // 2. Check singular imageUrl
-  // 3. Only fall back to placeholder if data is missing
+  // --- FIXED IMAGE LOGIC ---
+  // 1. Check 'images' array (Based on your JSON data structure)
+  // 2. Check 'imageUrls' array (Fallback for other data structures)
+  // 3. Check singular 'imageUrl'
+  // 4. Fall back to placeholder
   const getDisplayImage = () => {
+    if (
+      product.images &&
+      Array.isArray(product.images) &&
+      product.images.length > 0
+    ) {
+      return product.images[0];
+    }
     if (
       product.imageUrls &&
       Array.isArray(product.imageUrls) &&
@@ -32,6 +41,13 @@ const ProductCard = ({ product, onAddToCart, index }) => {
     e.preventDefault();
     e.stopPropagation();
     onAddToCart(product);
+    fbq("track", "AddToCart", {
+      content_name: product.name,
+      content_ids: [product.id],
+      content_type: "product",
+      value: product.price,
+      currency: "BDT",
+    });
   };
 
   const renderRating = (rating) => {
@@ -55,17 +71,14 @@ const ProductCard = ({ product, onAddToCart, index }) => {
   };
 
   return (
-    <Link href={`/product/${product.id}`} className="group block h-full">
+    <Link href={`/product/${product._id}`} className="group block h-full">
       <div className="bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden h-full flex flex-col border border-gray-100">
         {/* Image Container with Skeleton Loading */}
         <div className="relative w-full aspect-square bg-gray-100 overflow-hidden">
-          {/* Card Loading Skeleton (Shows until image loads) */}
           {!isImageLoaded && (
             <div className="absolute inset-0 bg-gray-200 animate-pulse z-0" />
           )}
 
-          {/* Real Image */}
-          {/* priority={index === 0} fixes the LCP warning for the top-left image */}
           <Image
             src={imageSrc}
             alt={product.name}
@@ -78,7 +91,6 @@ const ProductCard = ({ product, onAddToCart, index }) => {
             priority={index === 0}
           />
 
-          {/* Discount Badge */}
           {product.discount > 0 && (
             <div className="absolute top-2 right-2 z-20 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow-sm">
               -{product.discount}%
@@ -89,7 +101,7 @@ const ProductCard = ({ product, onAddToCart, index }) => {
         {/* Content */}
         <div className="p-3 sm:p-4 flex-1 flex flex-col">
           <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide truncate">
-            {product.brand}
+            {product.brand || "Generic"}
           </p>
           <h3 className="text-sm font-semibold text-gray-900 mb-2 line-clamp-2 min-h-[2.5rem] leading-5">
             {product.name}
@@ -102,15 +114,15 @@ const ProductCard = ({ product, onAddToCart, index }) => {
               {product.discount > 0 ? (
                 <>
                   <span className="text-lg font-bold text-gray-900 leading-none">
-                    ${parseFloat(product.finalPrice).toFixed(2)}
+                    ৳{parseFloat(product.finalPrice).toFixed(2)}
                   </span>
                   <span className="text-xs text-gray-400 line-through mt-1">
-                    ${parseFloat(product.price).toFixed(2)}
+                    ৳{parseFloat(product.price).toFixed(2)}
                   </span>
                 </>
               ) : (
                 <span className="text-lg font-bold text-gray-900 leading-none">
-                  ${parseFloat(product.price || product.finalPrice).toFixed(2)}
+                  ৳{parseFloat(product.price || product.finalPrice).toFixed(2)}
                 </span>
               )}
             </div>
@@ -134,20 +146,48 @@ const AllProductsPage = () => {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // Filter State
   const [sortBy, setSortBy] = useState("default");
-  const [filterPrice, setFilterPrice] = useState({ min: 0, max: 1000 });
+  const [filterPrice, setFilterPrice] = useState({ min: 0, max: 1000000 });
   const [filterCategory, setFilterCategory] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
+    fbq("track", "ViewContent", {
+      content_name: products.name,
+      content_category: products.category,
+      value: products.price,
+      currency: "BDT",
+    });
+  }, [products]);
+  console.log(products);
+
+  useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch("/api/products");
+        // Adding page parameter to the API call
+        const response = await fetch(
+          `/api/products?page=${currentPage}&limit=10`,
+        );
         if (!response.ok) {
           throw new Error("Failed to fetch products");
         }
         const data = await response.json();
+
         setProducts(data.data || []);
+
+        // Set pagination info from response
+        if (data.pagination) {
+          setTotalPages(data.pagination.pages || 1);
+          setTotalItems(data.pagination.total || 0);
+        }
+
         setIsLoading(false);
       } catch (err) {
         setError(err.message);
@@ -156,7 +196,13 @@ const AllProductsPage = () => {
     };
 
     fetchProducts();
-  }, []);
+  }, [currentPage]); // Refetch when currentPage changes
+
+  // Reset to page 1 when filters change
+  const handleFilterChange = (setter, value) => {
+    setter(value);
+    setCurrentPage(1);
+  };
 
   const uniqueCategories = useMemo(() => {
     if (!products.length) return [];
@@ -208,7 +254,8 @@ const AllProductsPage = () => {
         result.sort((a, b) => a.name.localeCompare(b.name));
         break;
       default:
-        result.sort((a, b) => a.id.localeCompare(b.id));
+        // Sort by MongoDB ID as a proxy for creation time if no default sort provided
+        result.sort((a, b) => a._id.localeCompare(b._id));
         break;
     }
 
@@ -217,8 +264,6 @@ const AllProductsPage = () => {
 
   const handleAddToCart = (product) => {
     console.log(`Added ${product.name} to cart`);
-    // Integrate your cart context here
-    // Example: addToCart(product);
     alert("Added to cart!"); // Simple feedback
   };
 
@@ -226,33 +271,22 @@ const AllProductsPage = () => {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header Skeleton */}
         <div className="mb-8 space-y-2">
           <div className="h-8 bg-gray-200 rounded w-1/3 animate-pulse"></div>
           <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
         </div>
-
-        {/* Filter Bar Skeleton */}
         <div className="bg-white p-4 rounded-lg shadow-sm mb-6 h-24 animate-pulse"></div>
-
-        {/* Grid Skeleton */}
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {[...Array(8)].map((_, i) => (
             <div
               key={i}
               className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden"
             >
-              {/* Image Skeleton */}
               <div className="w-full aspect-square bg-gray-200"></div>
-              {/* Content Skeleton */}
               <div className="p-4 space-y-3">
                 <div className="h-4 bg-gray-200 rounded w-1/2"></div>
                 <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                 <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                <div className="flex justify-between items-center pt-2">
-                  <div className="h-5 bg-gray-200 rounded w-1/3"></div>
-                  <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
-                </div>
               </div>
             </div>
           ))}
@@ -299,7 +333,7 @@ const AllProductsPage = () => {
       </div>
 
       {/* Filters and Sorting */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 mb-8 sticky top-4 z-30">
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 mb-8  z-30">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-center">
           {/* Search Input */}
           <div className="lg:col-span-2 relative">
@@ -307,7 +341,9 @@ const AllProductsPage = () => {
               type="text"
               placeholder="Search products..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) =>
+                handleFilterChange(setSearchTerm, e.target.value)
+              }
               className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
             />
             <svg
@@ -329,7 +365,9 @@ const AllProductsPage = () => {
           <div>
             <select
               value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
+              onChange={(e) =>
+                handleFilterChange(setFilterCategory, e.target.value)
+              }
               className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
               {uniqueCategories.map((cat) => (
@@ -375,7 +413,7 @@ const AllProductsPage = () => {
           <div>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => handleFilterChange(setSortBy, e.target.value)}
               className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
               <option value="default">Sort by: Featured</option>
@@ -391,7 +429,7 @@ const AllProductsPage = () => {
       {/* Products Count */}
       <div className="mb-6 text-sm font-medium text-gray-600 flex justify-between items-center">
         <span>
-          Showing {filteredAndSortedProducts.length} of {products.length}{" "}
+          Showing {filteredAndSortedProducts.length} of {totalItems} total
           products
         </span>
         {(searchTerm || filterCategory !== "all" || sortBy !== "default") && (
@@ -399,8 +437,9 @@ const AllProductsPage = () => {
             onClick={() => {
               setSearchTerm("");
               setFilterCategory("all");
-              setFilterPrice({ min: 0, max: 1000 });
+              setFilterPrice({ min: 0, max: 10000000 });
               setSortBy("default");
+              setCurrentPage(1);
             }}
             className="text-blue-600 hover:text-blue-800 underline"
           >
@@ -411,16 +450,57 @@ const AllProductsPage = () => {
 
       {/* Products Grid */}
       {filteredAndSortedProducts.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-          {filteredAndSortedProducts.map((product, index) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onAddToCart={handleAddToCart}
-              index={index} // Pass index to handle priority loading
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            {filteredAndSortedProducts.map((product, index) => (
+              <ProductCard
+                key={product._id || product.id} // FIXED: Use _id for uniqueness
+                product={product}
+                onAddToCart={handleAddToCart}
+                index={index}
+              />
+            ))}
+          </div>
+
+          {/* --- Pagination Controls --- */}
+          <div className="mt-12 flex items-center justify-between border-t border-gray-200 pt-6">
+            <div className="text-sm text-gray-500">
+              Page{" "}
+              <span className="font-medium text-gray-900">{currentPage}</span>{" "}
+              of <span className="font-medium text-gray-900">{totalPages}</span>
+            </div>
+
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className={`inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm ${
+                  currentPage === 1
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                } transition-colors`}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </button>
+
+              <button
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+                className={`inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm ${
+                  currentPage === totalPages
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                } transition-colors`}
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </button>
+            </div>
+          </div>
+        </>
       ) : (
         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-lg border border-dashed border-gray-300">
           <svg
@@ -447,8 +527,9 @@ const AllProductsPage = () => {
             onClick={() => {
               setSearchTerm("");
               setFilterCategory("all");
-              setFilterPrice({ min: 0, max: 1000 });
+              setFilterPrice({ min: 0, max: 1000000 });
               setSortBy("default");
+              setCurrentPage(1);
             }}
             className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
           >

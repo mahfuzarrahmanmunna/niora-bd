@@ -36,7 +36,7 @@ export default function LayoutContent({ children }) {
 
       {/* MOBILE BOTTOM NAVBAR: Fixed at the bottom of the screen on mobile, but not on dashboard */}
       {!isDashboard && (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0  shadow-lg bg-gray-300">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0  shadow-lg bg-gray-300 z-50">
           <BottomNavbar />
         </nav>
       )}

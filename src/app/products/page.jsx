@@ -1,10 +1,37 @@
-// app/products/page.jsx
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ShoppingCart, Loader2 } from "lucide-react";
+import { Suspense } from "react"; // 1. Import Suspense
+import { fbq } from "@/lib/fpixel";
 
-const AllProducts = () => {
+// --- 2. Extracted Loading Component (Used for Suspense Fallback) ---
+const ProductsSkeleton = () => {
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="h-8 bg-gray-200 rounded w-1/3 mb-8 animate-pulse mx-auto"></div>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+        {[...Array(8)].map((_, i) => (
+          <div
+            key={i}
+            className="bg-white rounded-lg border border-gray-100 overflow-hidden"
+          >
+            <div className="w-full aspect-square bg-gray-200 animate-pulse"></div>
+            <div className="p-4 space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// --- 3. Main Component Logic (Renamed to Content) ---
+const AllProductsContent = () => {
   const [products, setProducts] = useState([]);
   const [productsByCategory, setProductsByCategory] = useState({});
   const [displayedCategories, setDisplayedCategories] = useState([]);
@@ -14,26 +41,36 @@ const AllProducts = () => {
   const [categoriesLoaded, setCategoriesLoaded] = useState(0);
   const [error, setError] = useState(null);
   const observer = useRef();
-  const router = useRouter(); // Initialize router
-  const categoriesPerLoad = 2; // Number of categories to load at a time
+
+  const router = useRouter();
+  const searchParams = useSearchParams(); // Safe inside Suspense
+  const categoryParam = searchParams.get("category");
+
+  const categoriesPerLoad = 2;
+
+  useEffect(() => {
+    fbq("track", "ViewContent", {
+      content_name: products.name,
+      content_category: products.category,
+      value: products.price,
+      currency: "BDT",
+    });
+  }, [products]);
+  console.log(products);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setIsLoading(true);
-
-        // Fetch data from API
         const response = await fetch("/api/products");
         if (!response.ok) {
           throw new Error("Failed to fetch products");
         }
         const data = await response.json();
 
-        // Handle nested data structure
         let allProducts = [];
 
         if (data.success && Array.isArray(data.data)) {
-          // Use data.data directly if it's already an array of products
           allProducts = data.data;
         }
 
@@ -50,11 +87,14 @@ const AllProducts = () => {
 
         setProductsByCategory(grouped);
 
-        // Display first batch of categories
-        const categoryNames = Object.keys(grouped);
-        const initialCategories = categoryNames.slice(0, categoriesPerLoad);
-        setDisplayedCategories(initialCategories);
-        setCategoriesLoaded(categoriesPerLoad);
+        // Display first batch of categories (only if not filtering)
+        if (!categoryParam) {
+          const categoryNames = Object.keys(grouped);
+          const initialCategories = categoryNames.slice(0, categoriesPerLoad);
+          setDisplayedCategories(initialCategories);
+          setCategoriesLoaded(categoriesPerLoad);
+        }
+
         setIsLoading(false);
       } catch (err) {
         setError(err.message);
@@ -63,57 +103,55 @@ const AllProducts = () => {
     };
 
     fetchProducts();
-  }, []);
+  }, [categoryParam]);
 
-  // Function to render star rating
+  // --- IMAGE LOGIC HELPER ---
+  const getDisplayImage = (product) => {
+    if (
+      product.images &&
+      Array.isArray(product.images) &&
+      product.images.length > 0
+    ) {
+      return product.images[0];
+    }
+    if (
+      product.imageUrls &&
+      Array.isArray(product.imageUrls) &&
+      product.imageUrls.length > 0
+    ) {
+      return product.imageUrls[0];
+    }
+    if (product.imageUrl) {
+      return product.imageUrl;
+    }
+    return `https://picsum.photos/seed/${product.id}/400/400.jpg`;
+  };
+
   const renderRating = (rating) => {
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
-    const emptyStars = 5 - Math.ceil(rating);
-
     return (
       <div className="flex items-center">
-        {[...Array(fullStars)].map((_, i) => (
+        {[...Array(5)].map((_, i) => (
           <svg
-            key={`full-${i}`}
-            className="w-4 h-4 text-yellow-400"
+            key={i}
+            className={`w-4 h-4 ${
+              i < Math.floor(rating) ? "text-yellow-400" : "text-gray-300"
+            }`}
             fill="currentColor"
             viewBox="0 0 20 20"
           >
             <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
           </svg>
         ))}
-        {hasHalfStar && (
-          <svg
-            className="w-4 h-4 text-yellow-400"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-          </svg>
-        )}
-        {[...Array(emptyStars)].map((_, i) => (
-          <svg
-            key={`empty-${i}`}
-            className="w-4 h-4 text-gray-300"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-          </svg>
-        ))}
-        <span className="ml-1 text-xs text-gray-600">({rating})</span>
+        <span className="ml-1 text-xs text-gray-600">({rating || 0})</span>
       </div>
     );
   };
 
-  // Load more categories when user scrolls to bottom
   const loadMoreCategories = useCallback(() => {
     if (loadingMore || !hasMore) return;
 
     setLoadingMore(true);
 
-    // Simulate loading delay
     setTimeout(() => {
       const allCategories = Object.keys(productsByCategory);
       const nextCategories = allCategories.slice(
@@ -132,7 +170,6 @@ const AllProducts = () => {
     }, 500);
   }, [categoriesLoaded, loadingMore, hasMore, productsByCategory]);
 
-  // Setup intersection observer for infinite scroll
   const lastCategoryRef = useCallback(
     (node) => {
       if (loadingMore) return;
@@ -147,58 +184,170 @@ const AllProducts = () => {
     [loadingMore, hasMore, loadMoreCategories],
   );
 
-  // Handle product click (navigate to product details page)
-  const handleProductClick = (product) => {
-    // Navigate to product details page
-    router.push(`/product/${product.id}`);
-  };
-
-  // Handle add to cart
   const handleAddToCart = (e, product) => {
+    e.preventDefault();
     e.stopPropagation();
-    // Add to cart functionality here
     console.log(`Added ${product.name} to cart`);
-    // You can update cart state or show a notification here
+    fbq("track", "AddToCart", {
+      content_name: product.name,
+      content_ids: [product.id],
+      content_type: "product",
+      value: product.price,
+      currency: "BDT",
+    });
   };
 
   if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <h2 className="text-2xl font-bold mb-6 text-center md:text-2xl">
-          All Products
-        </h2>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="bg-gray-200 h-48 rounded-lg mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+    // We reuse the Skeleton here for consistency
+    return <ProductsSkeleton />;
   }
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center py-8">
-          <p className="text-red-500">Error loading products: {error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Try Again
-          </button>
-        </div>
+      <div className="container mx-auto px-4 py-8 text-center">
+        <p className="text-red-500 mb-4">Error loading products: {error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
 
+  // ==========================================
+  // VIEW: SPECIFIC CATEGORY FILTER
+  // ==========================================
+  if (categoryParam) {
+    const filteredProducts = products.filter(
+      (p) => p.category.toLowerCase() === categoryParam.toLowerCase(),
+    );
+
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 capitalize">
+              {categoryParam}
+            </h1>
+            <p className="text-gray-500 text-sm mt-1">
+              Showing {filteredProducts.length} products
+            </p>
+          </div>
+          <Link
+            href="/products"
+            className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center"
+          >
+            View All Categories
+            <svg
+              className="w-4 h-4 ml-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 8l4 4m0 0l-4 4m4-4H3"
+              />
+            </svg>
+          </Link>
+        </div>
+
+        {filteredProducts.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            {filteredProducts.map((product) => (
+              <div
+                key={product._id || product.id}
+                className="group bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 overflow-hidden flex flex-col"
+              >
+                <Link
+                  href={`/product/${product._id}`}
+                  className="block h-full flex flex-col"
+                >
+                  <div className="relative w-full aspect-square bg-gray-100 overflow-hidden">
+                    <Image
+                      src={getDisplayImage(product)}
+                      alt={product.name}
+                      fill
+                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      unoptimized={getDisplayImage(product).includes("ibb.co")}
+                    />
+                    {product.discount > 0 && (
+                      <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow-sm z-10">
+                        -{product.discount}%
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-4 flex-1 flex flex-col">
+                    <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide truncate">
+                      {product.brand || "Generic"}
+                    </p>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-2 line-clamp-2 leading-5 flex-1">
+                      {product.name}
+                    </h3>
+
+                    <div className="mb-3">{renderRating(product.rating)}</div>
+
+                    <div className="flex items-center justify-between mt-auto">
+                      <div className="flex flex-col">
+                        {product.discount > 0 ? (
+                          <>
+                            <span className="text-lg font-bold text-gray-900 leading-none">
+                              ৳
+                              {typeof product.finalPrice === "string"
+                                ? parseFloat(product.finalPrice).toFixed(2)
+                                : product.finalPrice.toFixed(2)}
+                            </span>
+                            <span className="text-xs text-gray-400 line-through mt-1">
+                              ৳
+                              {typeof product.price === "string"
+                                ? parseFloat(product.price).toFixed(2)
+                                : product.price.toFixed(2)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-lg font-bold text-gray-900 leading-none">
+                            ৳
+                            {typeof product.finalPrice === "string"
+                              ? parseFloat(product.finalPrice).toFixed(2)
+                              : product.finalPrice.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        className="p-2 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                        onClick={(e) => handleAddToCart(e, product)}
+                        aria-label="Add to cart"
+                      >
+                        <ShoppingCart className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20">
+            <p className="text-gray-500">No products found in this category.</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ==========================================
+  // VIEW: ALL PRODUCTS (GROUPED BY CATEGORY)
+  // ==========================================
   return (
     <div className="container mx-auto py-8 px-4">
-      <h2 className="text-xl font-bold mb-6 text-center md:text-2xl">
+      <h2 className="text-3xl font-bold text-center text-gray-900 mb-8">
         All Products
       </h2>
 
@@ -212,106 +361,119 @@ const AllProducts = () => {
           }
           className="mb-12"
         >
-          <h3 className="text-lg font-semibold mb-4 capitalize text-gray-800">
-            {category}
-          </h3>
+          <div className="flex items-center mb-6">
+            <h3 className="text-xl font-bold text-gray-800 capitalize">
+              {category}
+            </h3>
+            <div className="flex-1 h-px bg-gray-200 ml-4"></div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
             {productsByCategory[category].map((product) => (
               <div
-                key={product.id}
-                className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden cursor-pointer"
-                onClick={() => handleProductClick(product)}
+                key={product._id || product.id}
+                className="group bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 overflow-hidden flex flex-col"
               >
-                <div className="relative">
-                  <div className="w-full h-40 md:h-48 bg-gray-100 relative overflow-hidden">
-                    {/* Using Next.js Image component */}
+                <Link
+                  href={`/product/${product._id}`}
+                  className="block h-full flex flex-col"
+                >
+                  <div className="relative w-full aspect-square bg-gray-100 overflow-hidden">
                     <Image
-                      src={
-                        product.imageUrl ||
-                        `https://picsum.photos/seed/${product.id}/400/400.jpg`
-                      }
+                      src={getDisplayImage(product)}
                       alt={product.name}
                       fill
                       sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                      className="object-cover hover:scale-105 transition-transform duration-300"
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      unoptimized={getDisplayImage(product).includes("ibb.co")}
                     />
-                  </div>
-                  {product.discount > 0 && (
-                    <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
-                      -{product.discount}%
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-3">
-                  <p className="text-xs text-gray-500 mb-1">{product.brand}</p>
-                  <h3 className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">
-                    {product.name}
-                  </h3>
-
-                  <div className="flex items-center mb-2">
-                    {renderRating(product.rating)}
+                    {product.discount > 0 && (
+                      <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow-sm z-10">
+                        -{product.discount}%
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      {product.discount > 0 ? (
-                        <>
-                          <span className="text-sm font-bold text-gray-900">
-                            ${parseFloat(product.finalPrice || 0).toFixed(2)}
+                  <div className="p-4 flex-1 flex flex-col">
+                    <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide truncate">
+                      {product.brand || "Generic"}
+                    </p>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-2 line-clamp-2 leading-5 flex-1">
+                      {product.name}
+                    </h3>
+
+                    <div className="mb-3">{renderRating(product.rating)}</div>
+
+                    <div className="flex items-center justify-between mt-auto">
+                      <div className="flex flex-col">
+                        {product.discount > 0 ? (
+                          <>
+                            <span className="text-lg font-bold text-gray-900 leading-none">
+                              ৳
+                              {typeof product.finalPrice === "string"
+                                ? parseFloat(product.finalPrice).toFixed(2)
+                                : product.finalPrice.toFixed(2)}
+                            </span>
+                            <span className="text-xs text-gray-400 line-through mt-1">
+                              ৳
+                              {typeof product.price === "string"
+                                ? parseFloat(product.price).toFixed(2)
+                                : product.price.toFixed(2)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-lg font-bold text-gray-900 leading-none">
+                            ৳
+                            {typeof product.finalPrice === "string"
+                              ? parseFloat(product.finalPrice).toFixed(2)
+                              : product.finalPrice.toFixed(2)}
                           </span>
-                          <span className="text-xs text-gray-500 line-through ml-1">
-                            ${parseFloat(product.price || 0).toFixed(2)}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-sm font-bold text-gray-900">
-                          ${parseFloat(product.price || 0).toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      className="p-1 rounded-full bg-blue-500 text-white hover:bg-blue-600 focus:outline-none transition-colors"
-                      onClick={(e) => handleAddToCart(e, product)}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+                        )}
+                      </div>
+
+                      <button
+                        className="p-2 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                        onClick={(e) => handleAddToCart(e, product)}
+                        aria-label="Add to cart"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      </svg>
-                    </button>
+                        <ShoppingCart className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
+                </Link>
               </div>
             ))}
           </div>
         </div>
       ))}
 
-      {/* Loading indicator for more categories */}
       {loadingMore && (
-        <div className="flex justify-center mt-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div className="flex justify-center mt-8 py-4">
+          <div className="flex items-center space-x-2 text-blue-600">
+            <Loader2 className="animate-spin h-6 w-6" />
+            <span className="text-sm font-medium">
+              Loading more categories...
+            </span>
+          </div>
         </div>
       )}
 
-      {/* End of products message */}
       {!hasMore && (
-        <div className="text-center mt-8 text-gray-500">
-          <p>You have reached the end of our product list</p>
+        <div className="text-center mt-12 py-8 border-t border-gray-100">
+          <p className="text-gray-500 text-sm">
+            You have reached the end of our product list
+          </p>
         </div>
       )}
     </div>
   );
 };
 
-export default AllProducts;
+// --- 4. Default Export with Suspense Wrapper ---
+export default function AllProducts() {
+  return (
+    <Suspense fallback={<ProductsSkeleton />}>
+      <AllProductsContent />
+    </Suspense>
+  );
+}

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { fbq } from "@/lib/fpixel";
 
 const WishlistPage = () => {
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -43,6 +44,13 @@ const WishlistPage = () => {
     // In a real app, this would add the item to the cart
     setMessage({ type: "success", text: "Item added to cart." });
     setTimeout(() => setMessage({ type: "", text: "" }), 3000);
+    fbq("track", "AddToCart", {
+      content_name: product.name,
+      content_ids: [product.id],
+      content_type: "product",
+      value: product.price,
+      currency: "BDT",
+    });
   };
 
   return (

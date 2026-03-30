@@ -96,7 +96,9 @@ const BottomNavbar = () => {
                   </span>
                 )}
               </div>
-              <span className="text-[10px] mt-1 font-medium">{item.label}</span>
+              <span className="text-[10px] mt-1 font-bold text-xs">
+                {item.label}
+              </span>
             </Link>
           );
         })}

@@ -23,6 +23,10 @@ const CartPage = () => {
   const [error, setError] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+
+  // New State for Shipping Location
+  const [shippingLocation, setShippingLocation] = useState("inside"); // 'inside' or 'outside'
+
   const router = useRouter();
   const hasFetchedRef = useRef(false);
 
@@ -193,6 +197,11 @@ const CartPage = () => {
           method: "DELETE",
         }).catch((err) => console.error("API sync error:", err));
       }
+
+      // Force reload to ensure Navbar and state are fully synced as requested
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     } catch (err) {
       console.error("Error removing item:", err);
       alert("Failed to remove item");
@@ -201,10 +210,10 @@ const CartPage = () => {
     }
   };
 
-  const calculateTotal = () => {
+  // Calculate Subtotal
+  const calculateSubtotal = () => {
     return cartItems
       .reduce((total, item) => {
-        // Ensure we parse strings to numbers for calculation
         const price = parseFloat(
           item.product?.finalPrice || item.product?.price || 0,
         );
@@ -212,6 +221,33 @@ const CartPage = () => {
       }, 0)
       .toFixed(2);
   };
+
+  // Calculate Shipping Cost based on location and max item shipping
+  const calculateShippingCost = () => {
+    if (cartItems.length === 0) return 0;
+
+    let maxShipping = 0;
+    cartItems.forEach((item) => {
+      const product = item.product;
+      if (product && product.shipping) {
+        const cost =
+          shippingLocation === "inside"
+            ? parseFloat(product.shipping.insideDhaka) || 0
+            : parseFloat(product.shipping.outsideDhaka) || 0;
+
+        // Logic: Usually you pay the highest shipping cost in the cart for the whole order
+        if (cost > maxShipping) {
+          maxShipping = cost;
+        }
+      }
+    });
+    return maxShipping;
+  };
+
+  // Grand Total
+  const grandTotal = (
+    parseFloat(calculateSubtotal()) + calculateShippingCost()
+  ).toFixed(2);
 
   const handleCheckout = async () => {
     try {
@@ -229,12 +265,16 @@ const CartPage = () => {
         items: cartItems.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
-          // API calculates price, but sending it is fine
           price: item.product?.finalPrice || item.product?.price || 0,
         })),
+        // Add shipping info to order
+        shipping: {
+          location: shippingLocation,
+          cost: calculateShippingCost(),
+        },
+        totalAmount: grandTotal,
       };
 
-      // CHANGE: Using /api/manage-my-order as requested
       const response = await fetch("/api/manage-my-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -253,7 +293,6 @@ const CartPage = () => {
         setContextCartItems([]);
       }
 
-      // FIX: Access the ID from data.data._id (based on your API response structure)
       router.push(`/payment?orderId=${data.data._id}`);
     } catch (error) {
       console.error("Checkout error:", error);
@@ -357,7 +396,9 @@ const CartPage = () => {
                   >
                     <div className="w-24 h-24 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                       <Image
+                        // UPDATED: Checks 'images' array first (matching your JSON), then fallbacks
                         src={
+                          item.product?.images?.[0] ||
                           item.product?.imageUrls?.[0] ||
                           item.product?.imageUrl ||
                           `https://picsum.photos/seed/${item.productId}/200/200.jpg`
@@ -383,15 +424,15 @@ const CartPage = () => {
                         {item.product?.discount > 0 ? (
                           <>
                             <span className="font-bold">
-                              ${formatPrice(item.product.finalPrice)}
+                              ৳{formatPrice(item.product.finalPrice)}
                             </span>
                             <span className="text-sm text-gray-500 line-through ml-2">
-                              ${formatPrice(item.product.price)}
+                              ৳{formatPrice(item.product.price)}
                             </span>
                           </>
                         ) : (
                           <span className="font-bold">
-                            ${formatPrice(item.product?.price)}
+                            ৳{formatPrice(item.product?.price)}
                           </span>
                         )}
                       </div>
@@ -438,19 +479,60 @@ const CartPage = () => {
             <div className="bg-white rounded-lg shadow-sm p-6 sticky top-6">
               <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
 
-              <div className="space-y-3 mb-6">
+              <div className="space-y-4 mb-6">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium">${calculateTotal()}</span>
+                  <span className="font-medium">৳{calculateSubtotal()}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Shipping</span>
-                  <span className="text-green-600">Free</span>
+
+                {/* Shipping Location Selector */}
+                <div className="pt-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Delivery Area
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="shippingLocation"
+                        value="inside"
+                        checked={shippingLocation === "inside"}
+                        onChange={(e) => setShippingLocation(e.target.value)}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">
+                        Inside Dhaka
+                      </span>
+                    </label>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="shippingLocation"
+                        value="outside"
+                        checked={shippingLocation === "outside"}
+                        onChange={(e) => setShippingLocation(e.target.value)}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">
+                        Outside Dhaka
+                      </span>
+                    </label>
+                  </div>
                 </div>
+
+                <div className="flex justify-between items-center border-t pt-3">
+                  <span className="text-gray-600">Shipping Cost</span>
+                  <span className="font-medium">
+                    ৳{calculateShippingCost().toFixed(2)}
+                  </span>
+                </div>
+
                 <div className="border-t pt-3">
-                  <div className="flex justify-between">
-                    <span className="font-semibold">Total</span>
-                    <span className="font-semibold">${calculateTotal()}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-lg">Total</span>
+                    <span className="font-bold text-lg text-blue-600">
+                      ৳{grandTotal}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -458,7 +540,7 @@ const CartPage = () => {
               <button
                 onClick={handleCheckout}
                 disabled={isCheckingOut || isUpdating}
-                className="w-full py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+                className="w-full py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
               >
                 {isCheckingOut ? "Processing..." : "Proceed to Checkout"}
               </button>
@@ -467,22 +549,26 @@ const CartPage = () => {
                 <div className="flex items-start space-x-3">
                   <Truck className="h-5 w-5 text-blue-500 mt-0.5" />
                   <div>
-                    <h4 className="font-medium">Free Shipping</h4>
-                    <p className="text-sm text-gray-600">On orders over $50</p>
+                    <h4 className="font-medium text-sm">Fast Delivery</h4>
+                    <p className="text-xs text-gray-600">
+                      Reliable delivery across Bangladesh
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <Shield className="h-5 w-5 text-blue-500 mt-0.5" />
                   <div>
-                    <h4 className="font-medium">Secure Payment</h4>
-                    <p className="text-sm text-gray-600">100% secure</p>
+                    <h4 className="font-medium text-sm">Secure Payment</h4>
+                    <p className="text-xs text-gray-600">
+                      100% secure payment gateways
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <RefreshCw className="h-5 w-5 text-blue-500 mt-0.5" />
                   <div>
-                    <h4 className="font-medium">Easy Returns</h4>
-                    <p className="text-sm text-gray-600">30-day policy</p>
+                    <h4 className="font-medium text-sm">Easy Returns</h4>
+                    <p className="text-xs text-gray-600">7-day return policy</p>
                   </div>
                 </div>
               </div>

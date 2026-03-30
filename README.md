@@ -89,11 +89,11 @@ MONGODB_URI=your_mongodb_connection_string
 DB_NAME=your_database_name
 
 # NextAuth
-NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_URL=https://www.dilodoor.com
 NEXTAUTH_SECRET=your-nextauth-secret
 
 # Public app url used by payment callbacks
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=https://www.dilodoor.com
 
 # IMGBB (image hosting)
 NEXT_PUBLIC_IMGBB_API_KEY=your_imgbb_api_key
@@ -136,7 +136,7 @@ pnpm run start
 pnpm run lint
 ```
 
-Open http://localhost:3000 to view the site.
+Open https://www.dilodoor.com to view the site.
 
 ---
 

@@ -128,7 +128,9 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center">
           <Link href="/">
-            <h1 className="text-3xl font-bold text-blue-600">YourLogo</h1>
+            <h1 className="text-3xl font-bold text-red-600 italic font-sans">
+              Dilodoor
+            </h1>
           </Link>
           <h2 className="mt-6 text-2xl font-bold text-gray-900">
             Sign in to your account
@@ -173,7 +175,7 @@ export default function LoginPage() {
         )}
 
         {/* Social Login Buttons */}
-        <div className="space-y-3">
+        {/* <div className="space-y-3">
           <button
             onClick={() => handleSocialLogin("google")}
             disabled={socialLoading.google}
@@ -256,7 +258,7 @@ export default function LoginPage() {
             )}
             Continue with Facebook
           </button>
-        </div>
+        </div> */}
 
         {/* Divider */}
         <div className="relative">

@@ -1,67 +1,100 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Check, ArrowLeft, Home } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import {
+  CheckCircle,
+  ShoppingBag,
+  Home,
+  FileText,
+  AlertCircle,
+  Copy,
+  Check,
+} from "lucide-react";
 
 export default function OrderConfirmationClient() {
-  const [order, setOrder] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const [orderId, setOrderId] = useState(null);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setOrderId(params.get("orderId"));
-  }, []);
+  // Get Order ID from URL
+  const orderId = searchParams.get("orderId");
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [orderData, setOrderData] = useState(null);
+
+  // State for Copy Button feedback
+  const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
     if (!orderId) {
-      router.push("/");
+      setError("Order ID is missing. We couldn't identify your order.");
+      setLoading(false);
+      return;
+    }
+
+    if (orderId === "null" || orderId === "undefined") {
+      setError("Invalid Order ID provided.");
+      setLoading(false);
       return;
     }
 
     const fetchOrder = async () => {
       try {
-        setIsLoading(true);
+        setLoading(true);
         setError(null);
 
         const response = await fetch(`/api/manage-my-order/${orderId}`);
 
         if (!response.ok) {
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("text/html")) {
-            throw new Error("Order not found");
-          } else {
-            const errorData = await response.json();
-            throw new Error(
-              errorData.message ||
-                `Failed to fetch order with status ${response.status}`,
-            );
-          }
+          throw new Error("Failed to fetch order details.");
         }
 
         const data = await response.json();
-        if (data.success) {
-          setOrder(data.data);
+
+        if (data.success && data.data) {
+          setOrderData(data.data);
         } else {
-          throw new Error(data.message || "Failed to fetch order details.");
+          throw new Error(data.message || "Order not found.");
         }
       } catch (err) {
         console.error("Error fetching order:", err);
-        setError(
-          err.message ||
-            "An unexpected error occurred while fetching your order.",
-        );
+        setError(err.message || "Something went wrong.");
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
     fetchOrder();
-  }, [orderId, router]);
+  }, [orderId]);
 
-  if (isLoading) {
+  // --- COPY TO CLIPBOARD FUNCTION ---
+  const handleCopyOrderId = async () => {
+    if (!orderId) return;
+
+    try {
+      // Modern Clipboard API
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(orderId);
+      } else {
+        // Fallback for older browsers
+        const textArea = document.createElement("textarea");
+        textArea.value = orderId;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+
+      // Show visual feedback
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy text: ", err);
+    }
+  };
+
+  // Loading State
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
@@ -69,139 +102,121 @@ export default function OrderConfirmationClient() {
     );
   }
 
-  if (error || !order) {
+  // Error State
+  if (error) {
     return (
-      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="max-w-md mx-auto px-4 py-8 text-center">
-          <div className="bg-red-100 text-red-600 p-6 rounded-lg">
-            <h2 className="text-lg font-semibold mb-2">Error</h2>
-            <p>{error || "Order not found"}</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white max-w-md w-full rounded-2xl shadow-xl overflow-hidden">
+          <div className="bg-red-50 p-8 text-center">
+            <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <AlertCircle className="w-8 h-8 text-red-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Order Not Found
+            </h2>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <button
+              onClick={() => router.push("/")}
+              className="w-full inline-flex justify-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
+            >
+              Go to Homepage
+            </button>
           </div>
-          <button
-            onClick={() => router.push("/")}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            Back to Home
-          </button>
         </div>
       </div>
     );
   }
 
+  // Success State
   return (
-    <div className="bg-gray-50 min-h-screen">
-      <div className="max-w-3xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <div className="text-center mb-8">
-            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <Check className="h-8 w-8 text-green-600" />
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-white max-w-lg w-full rounded-2xl shadow-xl overflow-hidden">
+        {/* Success Header Section */}
+        <div className="bg-green-50 p-8 text-center">
+          <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4">
+            <CheckCircle className="w-10 h-10 text-green-600" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Order Placed Successfully!
+          </h1>
+          <p className="text-gray-600">
+            Thank you for your purchase. We have received your order.
+          </p>
+        </div>
+
+        {/* Order Details Section */}
+        <div className="p-8 space-y-6">
+          {/* Order ID Box (WITH COPY FUNCTIONALITY) */}
+          <div
+            onClick={handleCopyOrderId}
+            className="bg-gray-50 border border-gray-200 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition group relative"
+            title="Click to copy Order ID"
+          >
+            <div className="text-left">
+              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">
+                Order ID
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-lg font-bold text-gray-900 font-mono">
+                  {/* Display truncated ID for UI cleanliness */}
+                  {orderId ? orderId.substring(0, 12) + "..." : "N/A"}
+                </p>
+                {isCopied ? (
+                  <span className="text-xs font-bold text-green-600 flex items-center">
+                    <Check className="w-3 h-3 mr-1" /> Copied!
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-400 group-hover:text-blue-500 transition">
+                    <Copy className="w-3 h-3" />
+                  </span>
+                )}
+              </div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Order Confirmed!
-            </h1>
-            <p className="text-gray-600">
-              Your order has been successfully placed and will be delivered
-              soon.
+            <div className="bg-white p-2 rounded border border-gray-200">
+              <FileText className="w-5 h-5 text-gray-400" />
+            </div>
+          </div>
+
+          {/* Next Steps Text */}
+          <div className="text-sm text-gray-600 leading-relaxed text-center">
+            <p>
+              We will send you an email confirmation shortly. If this is a Cash
+              on Delivery order, our team will contact you to confirm delivery
+              details.
             </p>
           </div>
 
-          <div className="border-t border-gray-200 pt-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Order Details
-            </h2>
-            <div className="bg-gray-50 p-4 rounded-md">
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-600">Order ID:</span>
-                <span className="font-medium">{order._id}</span>
-              </div>
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-600">Order Date:</span>
-                <span className="font-medium">
-                  {new Date(order.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-600">Payment Method:</span>
-                <span className="font-medium">
-                  {order.paymentMethod === "cash_on_delivery"
-                    ? "Cash on Delivery"
-                    : "Online Payment"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Status:</span>
-                <span className="font-medium text-blue-600">
-                  {order.status}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-200 pt-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Shipping Address
-            </h2>
-            <div className="bg-gray-50 p-4 rounded-md">
-              <p className="font-medium">
-                {order.shippingAddress?.name || "N/A"}
-              </p>
-              <p className="text-gray-600">
-                {order.shippingAddress?.address || "N/A"}
-              </p>
-              <p className="text-gray-600">
-                {order.shippingAddress?.city || "N/A"},{" "}
-                {order.shippingAddress?.country || "N/A"}
-              </p>
-              <p className="text-gray-600">
-                {order.shippingAddress?.phone || "N/A"}
-              </p>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-200 pt-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Order Summary
-            </h2>
-            <div className="space-y-2">
-              {order.items.map((item, index) => (
-                <div key={index} className="flex justify-between">
-                  <span className="text-gray-600">
-                    {item.name} x {item.quantity}
-                  </span>
-                  <span className="font-medium">
-                    ${(item.price * item.quantity).toFixed(2)}
-                  </span>
-                </div>
-              ))}
-              <div className="border-t pt-2 mt-2">
-                <div className="flex justify-between">
-                  <span className="text-lg font-semibold text-gray-900">
-                    Total
-                  </span>
-                  <span className="text-lg font-semibold text-gray-900">
-                    ${order.totalPrice.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4">
+          {/* Action Buttons */}
+          <div className="space-y-3 pt-4">
             <button
               onClick={() => router.push("/")}
-              className="flex-1 flex justify-center items-center px-4 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="w-full flex justify-center items-center px-4 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
-              <Home className="h-5 w-5 mr-2" />
-              Back to Home
-            </button>
-            <button
-              onClick={() => router.push("/products")}
-              className="flex-1 flex justify-center items-center px-4 py-3 bg-gray-200 text-gray-800 font-medium rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-            >
-              <ArrowLeft className="h-5 w-5 mr-2" />
+              <ShoppingBag className="w-5 h-5 mr-2" />
               Continue Shopping
             </button>
+
+            <button
+              onClick={() => router.push("/manage-add-to-cart")}
+              className="w-full flex justify-center items-center px-4 py-3 bg-white text-gray-700 font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            >
+              <Home className="w-5 h-5 mr-2" />
+              Return to Home
+            </button>
           </div>
+        </div>
+
+        {/* Footer Note */}
+        <div className="bg-gray-50 px-8 py-4 border-t border-gray-200 text-center">
+          <p className="text-xs text-gray-500">
+            Need help? Contact our support team at{" "}
+            <a
+              href="mailto:support@yourstore.com"
+              className="text-blue-600 hover:underline"
+            >
+              support@yourstore.com
+            </a>
+          </p>
         </div>
       </div>
     </div>

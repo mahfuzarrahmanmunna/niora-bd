@@ -10,6 +10,8 @@ import {
   Send,
   AlertCircle,
   Package,
+  Copy,
+  Check,
 } from "lucide-react";
 
 const PaymentPage = () => {
@@ -18,9 +20,12 @@ const PaymentPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
 
+  // State for "Copied to clipboard" feedback
+  const [copiedNumber, setCopiedNumber] = useState(null);
+
   // Payment and Delivery State
   const [paymentMethod, setPaymentMethod] = useState("cod");
-  const [deliveryMethod, setDeliveryMethod] = useState("steadfast"); // Default delivery method
+  const [deliveryMethod, setDeliveryMethod] = useState("steadfast");
 
   const router = useRouter();
   const [orderId, setOrderId] = useState(null);
@@ -80,6 +85,34 @@ const PaymentPage = () => {
     fetchOrder();
   }, [orderId]);
 
+  // UPDATED: Format Currency to BDT (Taka)
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-BD", {
+      style: "currency",
+      currency: "BDT",
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  // Handle Copy to Clipboard
+  const handleCopy = (number) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(number).then(() => {
+        setCopiedNumber(number);
+        setTimeout(() => setCopiedNumber(null), 2000);
+      });
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = number;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setCopiedNumber(number);
+      setTimeout(() => setCopiedNumber(null), 2000);
+    }
+  };
+
   const handleInputChange = (e) => {
     setCustomerInfo({ ...customerInfo, [e.target.name]: e.target.value });
   };
@@ -92,52 +125,44 @@ const PaymentPage = () => {
     setError(null);
 
     try {
-      let apiEndpoint;
-      let requestBody;
-
       // Common payload data
       const basePayload = {
         orderId: order._id,
         amount: order.totalPrice,
         customerInfo,
-        deliveryMethod, // Sending the selected delivery method
+        deliveryMethod,
       };
 
-      switch (paymentMethod) {
-        case "bkash":
-          apiEndpoint = "/api/bkash/init";
-          requestBody = basePayload;
-          break;
-        case "nagad":
-          apiEndpoint = "/api/nagad/init";
-          requestBody = basePayload;
-          break;
-        case "cod":
-          apiEndpoint = "/api/manage-my-order/cod";
-          requestBody = basePayload;
-          break;
-        default:
-          throw new Error("Invalid payment method selected");
-      }
+      // REMOVED: bKash and Nagad API calls.
+      // They are now treated as "Manual Payment" (No server crash).
 
-      const response = await fetch(apiEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
+      if (paymentMethod === "cod") {
+        // COD: Save address and confirm order
+        const response = await fetch("/api/manage-my-order/cod", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(basePayload),
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (data.success) {
-        if (paymentMethod === "bkash" || paymentMethod === "nagad") {
-          // Redirect to bKash/Nagad gateway
-          window.location.href = data.paymentUrl;
-        } else if (paymentMethod === "cod") {
-          // Redirect to success page for Cash on Delivery
+        if (data.success) {
           router.push(`/order-confirmation?orderId=${order._id}`);
+        } else {
+          throw new Error(data.message || "COD processing failed.");
         }
-      } else {
-        throw new Error(data.message || "Payment initiation failed.");
+      } else if (paymentMethod === "bkash" || paymentMethod === "nagad") {
+        // Manual Payment (bKash/Nagad):
+        // We do not call the crashing API anymore.
+        // We alert the user and redirect to confirmation.
+
+        const methodName = paymentMethod === "bkash" ? "bKash" : "Nagad";
+        const number =
+          paymentMethod === "bkash" ? "01518997176" : "01518997176";
+
+        // Optional: You might want to call a 'manual-payment' API here later to save the status.
+        // For now, we just redirect to the success page.
+        router.push(`/order-confirmation?orderId=${order._id}&manual=true`);
       }
     } catch (err) {
       console.error("Error processing payment:", err);
@@ -198,8 +223,9 @@ const PaymentPage = () => {
             <h2 className="text-lg font-semibold text-gray-900">
               Order Summary
             </h2>
+            {/* UPDATED: Using formatCurrency which outputs Taka */}
             <p className="text-2xl font-bold text-blue-600">
-              Total Amount: ${order ? order.totalPrice.toFixed(2) : "0.00"}
+              Total Amount: {order ? formatCurrency(order.totalPrice) : "৳0.00"}
             </p>
           </div>
 
@@ -234,7 +260,7 @@ const PaymentPage = () => {
           )}
 
           <form onSubmit={handlePayment} className="space-y-8">
-            {/* Delivery Method Section */}
+            {/* Delivery Method */}
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 Delivery Method
@@ -259,51 +285,92 @@ const PaymentPage = () => {
                     </p>
                   </div>
                 </label>
-                {/* You can add more delivery methods here if needed */}
               </div>
             </div>
 
-            {/* Payment Method Section */}
+            {/* Payment Method */}
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 Payment Method
               </h3>
               <div className="space-y-3">
                 {/* bKash */}
-                <label className="flex items-center p-4 border rounded-md cursor-pointer hover:bg-gray-50">
+                <label className="flex items-start p-4 border rounded-md cursor-pointer hover:bg-gray-50">
                   <input
                     type="radio"
                     name="paymentMethod"
                     value="bkash"
                     checked={paymentMethod === "bkash"}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="mr-3"
+                    className="mr-3 mt-1"
                   />
-                  <Smartphone className="h-5 w-5 mr-2 text-pink-600" />
-                  <div>
-                    <p className="font-medium">bKash</p>
-                    <p className="text-sm text-gray-500">
-                      Mobile banking payment
+                  <Smartphone className="h-5 w-5 mr-3 mt-1 text-pink-600" />
+                  <div className="flex-1">
+                    <p className="font-bold text-gray-900">bKash Payment</p>
+                    <p className="text-sm text-gray-600 mt-1 mb-2">
+                      Send Money to this Personal Number:
                     </p>
+                    <div
+                      onClick={() => handleCopy("01518997176")}
+                      className="inline-flex items-center bg-pink-50 border border-pink-200 rounded px-3 py-2 cursor-pointer select-none hover:bg-pink-100 transition"
+                      title="Click to copy"
+                    >
+                      {copiedNumber === "01518997176" ? (
+                        <>
+                          <Check className="h-4 w-4 text-green-600 mr-2" />
+                          <span className="text-green-700 font-mono font-bold">
+                            Copied!
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-pink-700 font-mono font-bold mr-2">
+                            01518997176
+                          </span>
+                          <Copy className="h-4 w-4 text-pink-400" />
+                        </>
+                      )}
+                    </div>
                   </div>
                 </label>
 
                 {/* Nagad */}
-                <label className="flex items-center p-4 border rounded-md cursor-pointer hover:bg-gray-50">
+                <label className="flex items-start p-4 border rounded-md cursor-pointer hover:bg-gray-50">
                   <input
                     type="radio"
                     name="paymentMethod"
                     value="nagad"
                     checked={paymentMethod === "nagad"}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="mr-3"
+                    className="mr-3 mt-1"
                   />
-                  <Send className="h-5 w-5 mr-2 text-orange-600" />
-                  <div>
-                    <p className="font-medium">Nagad</p>
-                    <p className="text-sm text-gray-500">
-                      Mobile banking payment
+                  <Send className="h-5 w-5 mr-3 mt-1 text-orange-600" />
+                  <div className="flex-1">
+                    <p className="font-bold text-gray-900">Nagad Payment</p>
+                    <p className="text-sm text-gray-600 mt-1 mb-2">
+                      Send Money to this Personal Number:
                     </p>
+                    <div
+                      onClick={() => handleCopy("01518997176")}
+                      className="inline-flex items-center bg-orange-50 border border-orange-200 rounded px-3 py-2 cursor-pointer select-none hover:bg-orange-100 transition"
+                      title="Click to copy"
+                    >
+                      {copiedNumber === "01518997176" ? (
+                        <>
+                          <Check className="h-4 w-4 text-green-600 mr-2" />
+                          <span className="text-green-700 font-mono font-bold">
+                            Copied!
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-orange-700 font-mono font-bold mr-2">
+                            01518997176
+                          </span>
+                          <Copy className="h-4 w-4 text-orange-400" />
+                        </>
+                      )}
+                    </div>
                   </div>
                 </label>
 
@@ -347,23 +414,6 @@ const PaymentPage = () => {
                     name="name"
                     required
                     value={customerInfo.name}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    required
-                    value={customerInfo.email}
                     onChange={handleInputChange}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                   />
@@ -456,13 +506,13 @@ const PaymentPage = () => {
                   {paymentMethod === "bkash" && (
                     <>
                       <Smartphone className="h-5 w-5 mr-2" />
-                      Pay with bKash
+                      Confirm Order (bKash)
                     </>
                   )}
                   {paymentMethod === "nagad" && (
                     <>
                       <Send className="h-5 w-5 mr-2" />
-                      Pay with Nagad
+                      Confirm Order (Nagad)
                     </>
                   )}
                   {paymentMethod === "cod" && (

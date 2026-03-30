@@ -5,7 +5,11 @@ import { FaSearch, FaTimes, FaSpinner } from "react-icons/fa";
 import Image from "next/image";
 import Link from "next/link";
 
-const SearchBar = ({ placeholder = "Search products...", className = "" }) => {
+const SearchBar = ({
+  placeholder = "Search products...",
+  className = "",
+  onLinkClick, // New prop to notify parent (Navbar) when a link is clicked
+}) => {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState([]);
@@ -84,6 +88,7 @@ const SearchBar = ({ placeholder = "Search products...", className = "" }) => {
     e.preventDefault();
     if (query.trim()) {
       setShowSuggestions(false);
+      if (onLinkClick) onLinkClick(); // Close parent overlay if exists
       router.push(`/search?q=${encodeURIComponent(query)}`);
     }
   };
@@ -103,7 +108,7 @@ const SearchBar = ({ placeholder = "Search products...", className = "" }) => {
           onChange={handleInputChange}
           onFocus={() => query.trim() && setShowSuggestions(true)}
           placeholder={placeholder}
-          className="w-full px-4 py-2 pl-10 text-sm text-gray-700 bg-gray-100 border border-transparent rounded-full focus:outline-none focus:bg-white focus:border-indigo-500 transition-all duration-200"
+          className="w-full px-4 py-2 pl-10 text-sm text-gray-700 bg-gray-100 border border-transparent rounded-full focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-200"
         />
         <button
           type="submit"
@@ -132,46 +137,62 @@ const SearchBar = ({ placeholder = "Search products...", className = "" }) => {
 
       {/* Suggestions Dropdown */}
       {showSuggestions && (
-        <div className="absolute top-full left-0 right-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
           {filteredProducts.length > 0 ? (
             <ul className="py-1">
-              {filteredProducts.map((product) => (
-                <li key={product._id}>
-                  <Link
-                    href={`/product/${product._id}`}
-                    className="block px-4 py-3 hover:bg-gray-50 flex items-center transition-colors"
-                    onClick={() => setShowSuggestions(false)}
-                  >
-                    <div className="relative w-10 h-10 mr-3 flex-shrink-0 bg-gray-100 rounded">
-                      <Image
-                        src={
-                          product.imageUrls && product.imageUrls.length > 0
-                            ? product.imageUrls[0]
-                            : `https://picsum.photos/seed/${product._id}/100/100.jpg`
-                        }
-                        alt={product.name}
-                        fill
-                        sizes="40px"
-                        className="object-cover rounded"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {product.name}
-                      </p>
-                      <div className="flex items-center justify-between mt-1">
-                        <p className="text-xs text-gray-500">{product.brand}</p>
-                        <p className="text-sm font-bold text-indigo-600">
-                          ${formatPrice(product.finalPrice || product.price)}
-                        </p>
+              {filteredProducts.map((product) => {
+                // --- FIX: Always link to Product Details page on Mobile and Desktop ---
+                const productHref = `/product/${product._id}`;
+
+                return (
+                  <li key={product._id}>
+                    <Link
+                      href={productHref}
+                      className="block px-4 py-3 hover:bg-gray-50 flex items-center transition-colors"
+                      onClick={() => {
+                        setShowSuggestions(false);
+                        if (onLinkClick) onLinkClick(); // Notify parent to close overlay
+                      }}
+                    >
+                      <div className="relative w-10 h-10 mr-3 flex-shrink-0 bg-gray-100 rounded">
+                        <Image
+                          // Handle missing images gracefully
+                          src={
+                            (product.images && product.images[0]) ||
+                            (product.imageUrls && product.imageUrls[0]) ||
+                            product.imageUrl ||
+                            "https://placehold.co/100x100/png?text=No+Img"
+                          }
+                          alt={product.name}
+                          fill
+                          sizes="40px"
+                          className="object-cover rounded"
+                          unoptimized={true}
+                        />
                       </div>
-                    </div>
-                  </Link>
-                </li>
-              ))}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {product.name}
+                        </p>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-xs text-gray-500">
+                            {product.brand}
+                          </p>
+                          <p className="text-sm font-bold text-indigo-600">
+                            ৳{formatPrice(product.finalPrice || product.price)}
+                          </p>
+                        </div>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
               <li className="border-t border-gray-100">
                 <button
-                  onClick={handleSubmit}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleSubmit(e);
+                  }}
                   className="w-full text-center px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 font-medium"
                 >
                   View all results for `{query}`

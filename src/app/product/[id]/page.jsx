@@ -1,10 +1,10 @@
-// app/product/[id]/page.jsx
+// src/app/product/[id]
+
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-// import { useCart } from "@/context/CartContext"; // 1. Import useCart
 import {
   Star,
   ShoppingCart,
@@ -24,9 +24,10 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useCart } from "@/app/context/CartContext";
+import { fbq } from "@/lib/fpixel";
 
 const ProductDetails = () => {
-  const { addToCart } = useCart(); // 2. Get addToCart function from context
+  const { addToCart } = useCart();
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -42,6 +43,10 @@ const ProductDetails = () => {
   const [showZoom, setShowZoom] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
   const [expandedSpecs, setExpandedSpecs] = useState(false);
+
+  // State for Shipping Location
+  const [shippingLocation, setShippingLocation] = useState("inside");
+
   const fileInputRef = useRef(null);
   const imageRef = useRef(null);
   const router = useRouter();
@@ -198,13 +203,12 @@ const ProductDetails = () => {
     );
   };
 
-  // 3. Updated handleAddToCart to use Context
   const handleAddToCart = async () => {
     if (!product || product.stock === 0) return;
 
     setIsAddingToCart(true);
     try {
-      await addToCart(product, quantity); // Use context function
+      await addToCart(product, quantity);
       showNotification("Product added to cart!");
     } catch (error) {
       console.error("Error adding to cart:", error);
@@ -212,6 +216,13 @@ const ProductDetails = () => {
     } finally {
       setIsAddingToCart(false);
     }
+    fbq("track", "AddToCart", {
+      content_name: product.name,
+      content_ids: [product.id],
+      content_type: "product",
+      value: product.price,
+      currency: "BDT",
+    });
   };
 
   const handleBuyNow = async () => {
@@ -226,6 +237,12 @@ const ProductDetails = () => {
       if (!productId) {
         throw new Error("Invalid product ID");
       }
+
+      // Calculate shipping cost based on selection
+      const shippingCost =
+        shippingLocation === "inside"
+          ? product.shipping?.insideDhaka || 0
+          : product.shipping?.outsideDhaka || 0;
 
       // Create an order first instead of directly processing checkout
       const response = await fetch("/api/manage-my-order", {
@@ -242,6 +259,14 @@ const ProductDetails = () => {
               price: product.finalPrice || product.price,
             },
           ],
+          // Add shipping info
+          shipping: {
+            location: shippingLocation,
+            cost: shippingCost,
+          },
+          totalAmount:
+            parseFloat(product.finalPrice || product.price) * quantity +
+            shippingCost,
         }),
       });
 
@@ -446,19 +471,33 @@ const ProductDetails = () => {
 
   // ============================================================
   // FIX: Correct logic for handling images
+  // 1. Check 'images' array (from your JSON)
+  // 2. Check 'imageUrls' array (legacy)
+  // 3. Check 'imageUrl' string (legacy)
+  // 4. Fallback
   // ============================================================
-  const fallbackImages = [
-    product.imageUrl ||
-      `https://picsum.photos/seed/${product.id}-main/800/800.jpg`,
-    `https://picsum.photos/seed/${product.id}-alt1/800/800.jpg`,
-    `https://picsum.photos/seed/${product.id}-alt2/800/800.jpg`,
-    `https://picsum.photos/seed/${product.id}-alt3/800/800.jpg`,
-  ];
+  const getDisplayImages = (prod) => {
+    if (prod.images && Array.isArray(prod.images) && prod.images.length > 0) {
+      return prod.images;
+    }
+    if (
+      prod.imageUrls &&
+      Array.isArray(prod.imageUrls) &&
+      prod.imageUrls.length > 0
+    ) {
+      return prod.imageUrls;
+    }
+    if (prod.imageUrl) {
+      return [prod.imageUrl];
+    }
+    return [
+      `https://picsum.photos/seed/${prod.id}-main/800/800.jpg`,
+      `https://picsum.photos/seed/${prod.id}-alt1/800/800.jpg`,
+      `https://picsum.photos/seed/${prod.id}-alt2/800/800.jpg`,
+    ];
+  };
 
-  const productImages =
-    product.imageUrls && product.imageUrls.length > 0
-      ? product.imageUrls
-      : fallbackImages;
+  const productImages = getDisplayImages(product);
   // ============================================================
 
   return (
@@ -507,6 +546,7 @@ const ProductDetails = () => {
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 50vw"
                 priority
+                unoptimized={productImages[selectedImage].includes("ibb.co")}
               />
 
               <div className="absolute top-4 right-4 bg-white rounded-full p-2 shadow-md opacity-0 hover:opacity-100 transition-opacity">
@@ -552,6 +592,7 @@ const ProductDetails = () => {
                     fill
                     className="object-cover"
                     sizes="80px"
+                    unoptimized={img.includes("ibb.co")}
                   />
                 </button>
               ))}
@@ -584,23 +625,18 @@ const ProductDetails = () => {
 
             <div className="flex items-baseline space-x-3">
               <span className="text-3xl font-bold text-gray-900">
-                ${product.finalPrice || product.price}
+                ৳{product.finalPrice || product.price}
               </span>
               {product.discount > 0 && (
                 <>
                   <span className="text-xl text-gray-500 line-through">
-                    ${product.price}
+                    ৳{product.price}
                   </span>
                   <span className="text-sm text-red-500 font-semibold">
-                    Save ${(product.price - product.finalPrice).toFixed(2)}
+                    Save ৳{(product.price - product.finalPrice).toFixed(2)}
                   </span>
                 </>
               )}
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Description</h3>
-              <p className="text-gray-600">{product.description}</p>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -608,7 +644,7 @@ const ProductDetails = () => {
                 <>
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   <span className="text-green-600 font-medium">
-                    In Stock ({product.stock} available)
+                    In Stock (available)
                   </span>
                 </>
               ) : (
@@ -637,19 +673,6 @@ const ProductDetails = () => {
               </div>
             )}
 
-            {product.color && (
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Color</h3>
-                <div className="flex items-center space-x-2">
-                  <div
-                    className="w-8 h-8 rounded-full border-2 border-gray-300"
-                    style={{ backgroundColor: product.color.toLowerCase() }}
-                  ></div>
-                  <span className="text-gray-700">{product.color}</span>
-                </div>
-              </div>
-            )}
-
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
                 <span className="font-medium">Quantity:</span>
@@ -670,6 +693,44 @@ const ProductDetails = () => {
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
+              </div>
+
+              {/* NEW: Shipping Location Selector */}
+              <div className="flex items-center space-x-4">
+                <span className="font-medium">Delivery Area:</span>
+                <div className="flex items-center space-x-6">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="shippingLocation"
+                      value="inside"
+                      checked={shippingLocation === "inside"}
+                      onChange={(e) => setShippingLocation(e.target.value)}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">Inside Dhaka</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="shippingLocation"
+                      value="outside"
+                      checked={shippingLocation === "outside"}
+                      onChange={(e) => setShippingLocation(e.target.value)}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">Outside Dhaka</span>
+                  </label>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4 pl-24">
+                <span className="text-sm text-blue-600 font-medium">
+                  + ৳
+                  {shippingLocation === "inside"
+                    ? product.shipping?.insideDhaka || 0
+                    : product.shipping?.outsideDhaka || 0}
+                </span>
+                <span className="text-xs text-gray-500">Shipping Cost</span>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -719,38 +780,26 @@ const ProductDetails = () => {
               </div>
             )}
 
+            {/* UPDATED: Shipping & Returns Section */}
             <div className="border-t pt-6 space-y-4">
               <h3 className="text-lg font-semibold mb-4">Shipping & Returns</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex items-start space-x-3">
-                  <Truck className="h-5 w-5 text-gray-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-gray-900">Free Shipping</h4>
-                    <p className="text-sm text-gray-600">On orders over $50</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Shield className="h-5 w-5 text-gray-500 flex-shrink-0 mt-0.5" />
+                  <Truck className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <h4 className="font-medium text-gray-900">
-                      1-Year Warranty
+                      Delivery Charge
                     </h4>
                     <p className="text-sm text-gray-600">
-                      Against manufacturing defects
+                      Inside Dhaka: ৳{product.shipping?.insideDhaka || 0}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Outside Dhaka: ৳{product.shipping?.outsideDhaka || 0}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <RefreshCw className="h-5 w-5 text-gray-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-gray-900">
-                      30-Day Returns
-                    </h4>
-                    <p className="text-sm text-gray-600">Hassle-free returns</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Package className="h-5 w-5 text-gray-500 flex-shrink-0 mt-0.5" />
+                  <Package className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <h4 className="font-medium text-gray-900">
                       Secure Packaging
@@ -1254,14 +1303,19 @@ const ProductDetails = () => {
               {relatedProducts.map((relatedProduct) => (
                 <Link
                   href={`/product/${relatedProduct.id}`}
-                  key={relatedProduct.id}
+                  key={relatedProduct._id || relatedProduct.id}
                   className="group"
                 >
                   <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
                     <div className="relative">
                       <div className="w-full aspect-square bg-gray-100 relative overflow-hidden">
+                        {/* FIXED: Related Products Image Logic */}
                         <Image
                           src={
+                            (relatedProduct.images &&
+                              relatedProduct.images[0]) ||
+                            (relatedProduct.imageUrls &&
+                              relatedProduct.imageUrls[0]) ||
                             relatedProduct.imageUrl ||
                             `https://picsum.photos/seed/${relatedProduct.id}/400/400.jpg`
                           }
@@ -1269,6 +1323,14 @@ const ProductDetails = () => {
                           fill
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
                           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                          unoptimized={(
+                            (relatedProduct.images &&
+                              relatedProduct.images[0]) ||
+                            (relatedProduct.imageUrls &&
+                              relatedProduct.imageUrls[0]) ||
+                            relatedProduct.imageUrl ||
+                            ""
+                          ).includes("ibb.co")}
                         />
                       </div>
                       {relatedProduct.discount > 0 && (
@@ -1300,19 +1362,18 @@ const ProductDetails = () => {
                           {relatedProduct.discount > 0 ? (
                             <>
                               <span className="text-sm font-bold text-gray-900">
-                                ${relatedProduct.finalPrice.toFixed(2)}
+                                ৳{relatedProduct.finalPrice.toFixed(2)}
                               </span>
                               <span className="text-xs text-gray-500 line-through ml-1">
-                                ${relatedProduct.price.toFixed(2)}
+                                ৳{relatedProduct.price.toFixed(2)}
                               </span>
                             </>
                           ) : (
                             <span className="text-sm font-bold text-gray-900">
-                              ${relatedProduct.price.toFixed(2)}
+                              ৳{relatedProduct.price.toFixed(2)}
                             </span>
                           )}
                         </div>
-                        {/* 4. Updated Related Products Add to Cart */}
                         <button
                           className="p-1.5 rounded-full bg-blue-500 text-white hover:bg-blue-600 focus:outline-none transition-colors"
                           onClick={(e) => {

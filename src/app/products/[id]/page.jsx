@@ -23,6 +23,7 @@ import {
   Clock,
   Award,
 } from "lucide-react";
+import { fbq } from "@/lib/fpixel";
 
 const ProductDetails = () => {
   const { data: session } = useSession();
@@ -91,6 +92,15 @@ const ProductDetails = () => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3000);
   };
+
+  useEffect(() => {
+    fbq("track", "ViewContent", {
+      content_name: product.name,
+      content_category: product.category,
+      value: product.price,
+      currency: "BDT",
+    });
+  }, [product]);
 
   useEffect(() => {
     const fetchProductData = async () => {
@@ -241,6 +251,13 @@ const ProductDetails = () => {
     } finally {
       setIsAddingToCart(false);
     }
+    fbq("track", "AddToCart", {
+      content_name: product.name,
+      content_ids: [product.id],
+      content_type: "product",
+      value: product.price,
+      currency: "BDT",
+    });
   };
 
   const handleBuyNow = async () => {
@@ -703,15 +720,6 @@ const ProductDetails = () => {
                   <div>
                     <h4 className="font-medium text-gray-900">Free Shipping</h4>
                     <p className="text-sm text-gray-600">On orders over $50</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Shield className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-gray-900">
-                      1-Year Warranty
-                    </h4>
-                    <p className="text-sm text-gray-600">Against defects</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">

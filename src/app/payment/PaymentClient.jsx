@@ -282,7 +282,7 @@ export default function PaymentClient() {
                       </div>
                     </div>
                     <div className="text-sm font-medium">
-                      ${formatPrice(item.price)}
+                      ৳{formatPrice(item.price)}
                     </div>
                   </div>
                 ))}
@@ -290,7 +290,7 @@ export default function PaymentClient() {
                 <div className="border-t pt-2 mt-2 flex justify-between">
                   <div className="font-medium">Total</div>
                   <div className="font-semibold">
-                    ${formatPrice(order.totalPrice)}
+                    ৳{formatPrice(order.totalPrice)}
                   </div>
                 </div>
               </div>

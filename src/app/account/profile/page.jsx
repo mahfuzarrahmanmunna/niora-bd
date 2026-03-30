@@ -1,153 +1,561 @@
-// app/account/profile/page.jsx
-'use client';
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
+"use client";
+import React, { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Edit3,
+  Save,
+  X,
+  Lock,
+  ShieldCheck,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
+import Link from "next/link";
 
 const ProfilePage = () => {
-    const [isLoading, setIsLoading] = useState(false);
-    const [message, setMessage] = useState({ type: '', text: '' });
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
-    // Mock user data - in a real app, this would come from an API
-    const [user, setUser] = useState({
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        phone: '+1234567890',
-        profileImage: 'https://picsum.photos/seed/user123/200/200.jpg',
-    });
+  // State
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  console.log(user);
 
-    // Form states
-    const [profileForm, setProfileForm] = useState({ ...user });
+  // Form State
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+  });
 
-    useEffect(() => {
-        // In a real app, fetch user data here
-        // fetchUserData().then(data => setUser(data));
-    }, []);
+  // Password State
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
 
-    const handleProfileSubmit = async (e) => {
-        e.preventDefault();
-        setIsLoading(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setUser(prev => ({ ...prev, ...profileForm }));
-        setIsLoading(false);
-        setMessage({ type: 'success', text: 'Profile updated successfully!' });
-        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-    };
+  // Notifications
+  const [notification, setNotification] = useState({
+    show: false,
+    type: "success", // 'success' or 'error'
+    message: "",
+  });
 
-    const handleProfileImageChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setProfileForm(prev => ({ ...prev, profileImage: reader.result }));
-            };
-            reader.readAsDataURL(file);
+  // --- Fetch User Data ---
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/sign-in");
+    } else if (status === "authenticated" && session?.user?.id) {
+      fetchUserProfile(session.user.id);
+    }
+  }, [status, session, router]);
+
+  const fetchUserProfile = async (userId) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/users?userId=${userId}`);
+      const json = await res.json();
+
+      if (json.success && json.data) {
+        setUser(json.data);
+        setFormData({
+          name: json.data.name || "",
+          email: json.data.email || "",
+          phone: json.data.phone || "",
+          address: json.data.address || "",
+        });
+      } else {
+        showNotification("error", "Failed to load profile data");
+      }
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      showNotification("error", "An error occurred while loading profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- Handlers ---
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const toggleEdit = () => {
+    if (isEditing) {
+      // Reset to original data if cancelling
+      setFormData({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        address: user.address || "",
+      });
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+    if (!user?._id) return;
+
+    setSaving(true);
+    try {
+      // Prepare payload based on your API requirements
+      const payload = {
+        userId: user._id, // Important: API expects userId in body
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        // Role is omitted to prevent privilege escalation from this page
+      };
+
+      const res = await fetch("/api/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+
+      if (json.success) {
+        setUser((prev) => ({ ...prev, ...formData }));
+        setIsEditing(false);
+        showNotification("success", "Profile updated successfully!");
+
+        // Update session name locally for immediate UI feedback
+        if (session?.user) {
+          session.user.name = formData.name;
         }
-    };
+      } else {
+        showNotification("error", json.message || "Failed to update profile");
+      }
+    } catch (error) {
+      console.error(error);
+      showNotification("error", "An error occurred. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-    return (
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="mb-6">
-                <Link href="/account" className="text-blue-600 hover:text-blue-800">
-                    ← Back to Account
-                </Link>
-            </div>
+  const handlePasswordUpdate = async (e) => {
+    e.preventDefault();
 
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">Profile Information</h1>
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      showNotification("error", "New passwords do not match");
+      return;
+    }
+    if (passwordData.newPassword.length < 6) {
+      showNotification("error", "Password must be at least 6 characters");
+      return;
+    }
 
-            {/* Alert Message */}
-            {message.text && (
-                <div className={`mb-6 p-4 rounded-md ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {message.text}
-                </div>
-            )}
+    setSaving(true);
+    try {
+      const payload = {
+        userId: user._id,
+        // Note: Your API doesn't explicitly check 'currentPassword' before updating
+        // it just overwrites. We'll send the new password.
+        password: passwordData.newPassword,
+      };
 
-            <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="max-w-2xl mx-auto">
-                    <p className="text-gray-600 mb-6">Manage your personal information and update your profile details here.</p>
+      const res = await fetch("/api/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-                    <form onSubmit={handleProfileSubmit} className="space-y-6">
-                        {/* Profile Image */}
-                        <div className="flex flex-col sm:flex-row items-center gap-6 mb-8">
-                            <div className="flex-shrink-0">
-                                <Image src={profileForm.profileImage} alt="Profile" width={150} height={150} className="rounded-full object-cover border-4 border-gray-200" />
-                            </div>
-                            <div className="flex-1">
-                                <label htmlFor="profileImageUpload" className="block text-sm font-medium text-gray-700 mb-2">Profile Picture</label>
-                                <div className="relative">
-                                    <input
-                                        type="file"
-                                        id="profileImageUpload"
-                                        accept="image/*"
-                                        onChange={handleProfileImageChange}
-                                        className="hidden"
-                                    />
-                                    <label htmlFor="profileImageUpload" className="cursor-pointer flex items-center px-4 py-3 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.396 3.396m0 5.887-3.396 3.396-5.887 0-5.887-3.396 3.396v6.718a1 1 0 01-1 1v3.718a1 1 0 01-1 1H5.232a1 1 0 01-1-1V8.532a1 1 0 01-1-1z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12a3 3 0 00-3 3v6a3 3 0 003 3h6a3 3 0 003-3v-6a3 3 0 00-3-3z" />
-                                        </svg>
-                                        Upload New Photo
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
+      const json = await res.json();
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label htmlFor="name" className="block text-sm font-medium text-gray-700">Full Name</label>
-                                <input
-                                    type="text"
-                                    id="name"
-                                    value={profileForm.name}
-                                    onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email Address</label>
-                                <input
-                                    type="email"
-                                    id="email"
-                                    value={profileForm.email}
-                                    onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                />
-                            </div>
-                        </div>
-                        <div>
-                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
-                            <input
-                                type="tel"
-                                id="phone"
-                                value={profileForm.phone}
-                                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                            />
-                        </div>
+      if (json.success) {
+        showNotification("success", "Password changed successfully!");
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+        setShowPasswordSection(false);
+      } else {
+        showNotification("error", json.message || "Failed to change password");
+      }
+    } catch (error) {
+      console.error(error);
+      showNotification("error", "An error occurred.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-                        <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                            <button
-                                type="submit"
-                                disabled={isLoading}
-                                className="flex-1 py-2 px-4 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                            >
-                                {isLoading ? 'Saving...' : 'Save Changes'}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setProfileForm({ ...user })}
-                                className="flex-1 py-2 px-4 bg-gray-200 text-gray-800 font-medium rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+  const showNotification = (type, message) => {
+    setNotification({ show: true, type, message });
+    setTimeout(
+      () => setNotification((prev) => ({ ...prev, show: false })),
+      3000,
     );
+  };
+
+  const handleSignOut = async () => {
+    await signOut({ redirect: false });
+    router.push("/");
+  };
+
+  // --- Render Helpers ---
+
+  if (loading) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center text-gray-500">
+        User not found.
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="bg-white shadow rounded-lg p-6 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6">
+          <div className="flex items-center gap-6">
+            <div className="h-24 w-24 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-3xl font-bold border-4 border-white shadow-sm">
+              {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{user.name}</h1>
+              <p className="text-gray-500 flex items-center gap-2">
+                <Mail className="w-4 h-4" /> {user.email}
+              </p>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mt-2">
+                {user.role === "admin" ? "Admin" : "Customer"}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={handleSignOut}
+            className="text-red-600 hover:text-red-700 font-medium text-sm flex items-center gap-2 px-4 py-2 rounded-md hover:bg-red-50 transition-colors"
+          >
+            Sign Out
+          </button>
+        </div>
+
+        {/* Notification Toast */}
+        {notification.show && (
+          <div
+            className={`fixed bottom-4 right-4 px-6 py-4 rounded-lg shadow-lg text-white flex items-center gap-3 transform transition-all duration-300 animate-bounce ${
+              notification.type === "success" ? "bg-green-600" : "bg-red-600"
+            }`}
+          >
+            {notification.type === "success" ? (
+              <CheckCircle className="w-5 h-5" />
+            ) : (
+              <AlertCircle className="w-5 h-5" />
+            )}
+            <span>{notification.message}</span>
+          </div>
+        )}
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left: Profile Info Form */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white shadow rounded-lg p-6 sm:p-8">
+              <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                <h2 className="text-xl font-bold text-gray-900">
+                  Profile Information
+                </h2>
+                {!isEditing ? (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium text-sm"
+                  >
+                    <Edit3 className="w-4 h-4" /> Edit
+                  </button>
+                ) : (
+                  <button
+                    onClick={toggleEdit}
+                    className="flex items-center gap-2 text-gray-500 hover:text-gray-700 font-medium text-sm"
+                  >
+                    <X className="w-4 h-4" /> Cancel
+                  </button>
+                )}
+              </div>
+
+              <form onSubmit={handleProfileUpdate} className="space-y-6">
+                {/* Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                      <User className="h-5 w-5" />
+                    </div>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      className={`block w-full pl-10 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                        !isEditing
+                          ? "bg-gray-50 text-gray-600 border-gray-200"
+                          : "bg-white border-gray-300"
+                      }`}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                      <Mail className="h-5 w-5" />
+                    </div>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      disabled
+                      className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed sm:text-sm"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Contact support to change email.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                      <Phone className="h-5 w-5" />
+                    </div>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      placeholder="+1 (555) 000-0000"
+                      className={`block w-full pl-10 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                        !isEditing
+                          ? "bg-gray-50 text-gray-600 border-gray-200"
+                          : "bg-white border-gray-300"
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Address
+                  </label>
+                  <div className="relative">
+                    <div className="absolute top-3 left-3 pointer-events-none text-gray-400">
+                      <MapPin className="h-5 w-5" />
+                    </div>
+                    <textarea
+                      name="address"
+                      rows="3"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      className={`block w-full pl-10 pr-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                        !isEditing
+                          ? "bg-gray-50 text-gray-600 border-gray-200"
+                          : "bg-white border-gray-300"
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                {isEditing && (
+                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={toggleEdit}
+                      className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none flex items-center gap-2 disabled:opacity-75"
+                    >
+                      {saving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      {saving ? "Saving..." : "Save Changes"}
+                    </button>
+                  </div>
+                )}
+              </form>
+            </div>
+
+            {/* Password Section */}
+            {/* <div className="bg-white shadow rounded-lg p-6 sm:p-8">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Security</h2>
+                <button
+                  onClick={() => setShowPasswordSection(!showPasswordSection)}
+                  className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                >
+                  {showPasswordSection ? "Hide" : "Change Password"}
+                </button>
+              </div>
+
+              {showPasswordSection && (
+                <form
+                  onSubmit={handlePasswordUpdate}
+                  className="space-y-4 mt-4 pt-4 border-t border-gray-100"
+                >
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                        <Lock className="h-5 w-5" />
+                      </div>
+                      <input
+                        type="password"
+                        name="newPassword"
+                        value={passwordData.newPassword}
+                        onChange={handlePasswordChange}
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        placeholder="Enter new password"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Confirm New Password
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                        <ShieldCheck className="h-5 w-5" />
+                      </div>
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        value={passwordData.confirmPassword}
+                        onChange={handlePasswordChange}
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        placeholder="Confirm new password"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none flex items-center gap-2 disabled:opacity-75"
+                    >
+                      {saving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        "Update Password"
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div> */}
+          </div>
+
+          {/* Right: Info / Links */}
+          <div className="space-y-6">
+            <div className="bg-indigo-600 shadow rounded-lg p-6 text-white">
+              <h3 className="font-bold text-lg mb-2">Need Help?</h3>
+              <p className="text-indigo-100 text-sm mb-4">
+                If you have trouble accessing your account or updating your
+                information, please contact our support team.
+              </p>
+              <button className="w-full bg-white text-indigo-600 font-semibold py-2 rounded-md hover:bg-indigo-50 transition-colors text-sm">
+                Contact Support
+              </button>
+            </div>
+
+            <div className="bg-white shadow rounded-lg p-6">
+              <h3 className="font-bold text-gray-900 mb-4">Quick Links</h3>
+              <ul className="space-y-3">
+                <li>
+                  <Link
+                    href="/manage-my-order"
+                    className="flex items-center text-gray-600 hover:text-indigo-600 text-sm font-medium transition-colors"
+                  >
+                    <span>My Orders</span>
+                    <span className="ml-auto">→</span>
+                  </Link>
+                </li>
+                {/* <li>
+                  <Link
+                    href="/wishlist"
+                    className="flex items-center text-gray-600 hover:text-indigo-600 text-sm font-medium transition-colors"
+                  >
+                    <span>Wishlist</span>
+                    <span className="ml-auto">→</span>
+                  </Link>
+                </li> */}
+                {user.role === "admin" && (
+                  <li>
+                    <Link
+                      href="/dashboard"
+                      className="flex items-center text-gray-600 hover:text-indigo-600 text-sm font-medium transition-colors"
+                    >
+                      <span>Admin Dashboard</span>
+                      <span className="ml-auto">→</span>
+                    </Link>
+                  </li>
+                )}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default ProfilePage;

@@ -44,12 +44,17 @@ export default function AddProduct() {
     description: "",
     rating: 0,
     stock: "",
-    images: [], // Changed from imageUrl to images array
+    images: [],
     expirationDate: "",
     skinType: "",
     features: [],
     ingredients: [],
     tags: [],
+    // New Shipping State
+    shipping: {
+      insideDhaka: "",
+      outsideDhaka: "",
+    },
   });
 
   const [newFeature, setNewFeature] = useState("");
@@ -142,21 +147,29 @@ export default function AddProduct() {
     }
   };
 
+  // New handler for nested shipping state
+  const handleShippingChange = (e) => {
+    const { name, value } = e.target;
+    setProductData((prev) => ({
+      ...prev,
+      shipping: {
+        ...prev.shipping,
+        [name]: value,
+      },
+    }));
+  };
+
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
-    // Check if adding these files would exceed the limit
     if (imageFiles.length + files.length > 5) {
       toast.error("You can upload a maximum of 5 images");
       return;
     }
 
-    // Add new files to the existing ones
     const newFiles = [...imageFiles, ...files];
     setImageFiles(newFiles);
-
-    // Create previews for all files
     const newPreviews = [...imagePreviews];
 
     files.forEach((file) => {
@@ -165,14 +178,13 @@ export default function AddProduct() {
         newPreviews.push({
           file,
           preview: reader.result,
-          id: Date.now() + Math.random(), // Unique ID for each image
+          id: Date.now() + Math.random(),
         });
         setImagePreviews([...newPreviews]);
       };
       reader.readAsDataURL(file);
     });
 
-    // Reset the file input
     e.target.value = "";
   };
 
@@ -265,7 +277,6 @@ export default function AddProduct() {
     }
   };
 
-  // Function to upload images to ImgBB
   const uploadImagesToImgBB = async (files) => {
     const apiKey = "f2f3f75de26957d089ecdb402788644c";
     const uploadPromises = [];
@@ -273,12 +284,9 @@ export default function AddProduct() {
     for (const file of files) {
       const formData = new FormData();
       formData.append("key", apiKey);
-
-      // Convert file to base64
       const reader = new FileReader();
       const base64Promise = new Promise((resolve) => {
         reader.onloadend = () => {
-          // Remove the data:image/...;base64, prefix
           const base64Data = reader.result.replace(
             /^data:image\/[a-z]+;base64,/,
             "",
@@ -288,14 +296,11 @@ export default function AddProduct() {
         };
         reader.readAsDataURL(file);
       });
-
       await base64Promise;
-
       const uploadPromise = fetch("https://api.imgbb.com/1/upload", {
         method: "POST",
         body: formData,
       }).then((response) => response.json());
-
       uploadPromises.push(uploadPromise);
     }
 
@@ -319,16 +324,14 @@ export default function AddProduct() {
     setIsSubmitting(true);
 
     try {
-      // Generate ID if not provided
-      let productId = productData.id; // Changed from const to let
+      let productId = productData.id;
       if (!productId) {
         const categoryId = productData.category.substring(0, 3).toUpperCase();
         const randomId = Math.floor(1000 + Math.random() * 9000);
         productId = `${categoryId}${randomId}`;
       }
 
-      // Upload images to ImgBB if there are any
-      let imageUrls = []; // Changed from const to let
+      let imageUrls = [];
       if (imageFiles.length > 0) {
         setIsUploadingImages(true);
         try {
@@ -345,20 +348,24 @@ export default function AddProduct() {
         }
       }
 
-      // Prepare data for submission
       const submissionData = {
         ...productData,
         id: productId,
-        images: imageUrls, // Use the array of image URLs
+        images: imageUrls,
         price: parseFloat(productData.price),
         discount: parseFloat(productData.discount) || 0,
         finalPrice: parseFloat(productData.finalPrice),
         stock: parseInt(productData.stock),
         rating: parseFloat(productData.rating),
+        // Ensure shipping is converted to numbers
+        shipping: {
+          insideDhaka: parseFloat(productData.shipping.insideDhaka) || 0,
+          outsideDhaka: parseFloat(productData.shipping.outsideDhaka) || 0,
+        },
       };
 
-      // Send data to API
-      const response = await fetch("/api/add-products", {
+      // Updated API route to /api/products
+      const response = await fetch("/api/products", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -370,13 +377,10 @@ export default function AddProduct() {
 
       if (response.ok) {
         toast.success("Product added successfully!");
-
-        // Redirect to manage products page after successful submission
         setTimeout(() => {
           router.push("/dashboard/manage-products");
         }, 1500);
       } else {
-        // Handle API error
         toast.error(data.message || "Failed to add product. Please try again.");
       }
     } catch (error) {
@@ -629,7 +633,7 @@ export default function AddProduct() {
       </Head>
 
       <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Add New Product</CardTitle>
@@ -877,7 +881,6 @@ export default function AddProduct() {
                       </p>
                     </div>
 
-                    {/* Image previews */}
                     {imagePreviews.length > 0 && (
                       <div className="mt-4">
                         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -972,6 +975,39 @@ export default function AddProduct() {
                     Category Specific Details
                   </h3>
                   {renderCategorySpecificFields()}
+                </div>
+
+                {/* NEW: Shipping Information Section */}
+                <div className="space-y-4 p-4 bg-indigo-50/50 rounded-md border border-indigo-100">
+                  <h3 className="text-lg font-medium text-indigo-900">
+                    Shipping Information (Taka)
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="insideDhaka">Inside Dhaka (৳)</Label>
+                      <Input
+                        id="insideDhaka"
+                        name="insideDhaka"
+                        type="number"
+                        value={productData.shipping.insideDhaka}
+                        onChange={handleShippingChange}
+                        placeholder="e.g. 60"
+                        min="0"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="outsideDhaka">Outside Dhaka (৳)</Label>
+                      <Input
+                        id="outsideDhaka"
+                        name="outsideDhaka"
+                        type="number"
+                        value={productData.shipping.outsideDhaka}
+                        onChange={handleShippingChange}
+                        placeholder="e.g. 120"
+                        min="0"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex justify-end space-x-3">

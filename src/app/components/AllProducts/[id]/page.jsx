@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { fbq } from "@/lib/fpixel";
 
 const ProductDetails = ({ product }) => {
   const [selectedImage, setSelectedImage] = useState(0);
@@ -27,6 +28,13 @@ const ProductDetails = ({ product }) => {
       setIsAddingToCart(false);
       // You could show a success notification here
     }, 1500);
+    fbq("track", "AddToCart", {
+      content_name: product.name,
+      content_ids: [product.id],
+      content_type: "product",
+      value: product.price,
+      currency: "BDT",
+    });
   };
 
   const renderStars = (rating) => {

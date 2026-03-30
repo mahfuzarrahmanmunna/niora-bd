@@ -352,11 +352,12 @@ export default function AdminManageOrders() {
                       <span className="font-medium">User ID:</span>{" "}
                       {selectedOrder.userId}
                     </p>
+                    {/* Check if email exists in shipping address, otherwise show generic */}
                     <p>
                       <span className="font-medium">Email:</span>{" "}
-                      user@example.com (Mock)
-                    </p>{" "}
-                    {/* Assuming email comes from user profile normally */}
+                      {selectedOrder.shippingAddress?.email ||
+                        "user@example.com"}
+                    </p>
                     {selectedOrder.paymentMethod && (
                       <p>
                         <span className="font-medium">Payment Method:</span>
@@ -371,28 +372,80 @@ export default function AdminManageOrders() {
 
               {/* Right Column: Shipping & Actions */}
               <div className="space-y-6">
+                {/* UPDATED SHIPPING ADDRESS SECTION */}
                 <div>
                   <h3 className="text-lg font-semibold border-b pb-2 mb-3">
                     Shipping Address
                   </h3>
+
                   {selectedOrder.shippingAddress ? (
-                    <div className="bg-gray-50 p-4 rounded text-sm text-gray-700">
-                      <p className="font-bold text-lg">
-                        {selectedOrder.shippingAddress.fullName}
-                      </p>
-                      <p>{selectedOrder.shippingAddress.phone}</p>
-                      <p>{selectedOrder.shippingAddress.address}</p>
-                      <p>
-                        {selectedOrder.shippingAddress.city},{" "}
-                        {selectedOrder.shippingAddress.zipCode}
-                      </p>
+                    <div className="bg-gray-50 p-5 rounded border border-gray-200">
+                      {/* Name */}
+                      <div className="flex items-start mb-3">
+                        <div className="mt-1 mr-3 text-gray-500">
+                          <i className="fas fa-user"></i>
+                        </div>
+                        <div>
+                          <p className="font-bold text-lg text-gray-900">
+                            {selectedOrder.shippingAddress.fullName ||
+                              selectedOrder.shippingAddress.name ||
+                              "Unknown Name"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Phone Number (Highlighted as requested) */}
+                      <div className="flex items-start mb-3">
+                        <div className="mt-1 mr-3 text-gray-500">
+                          <i className="fas fa-phone-alt"></i>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500 uppercase font-semibold">
+                            Phone
+                          </p>
+                          <p className="text-gray-900 font-medium">
+                            {selectedOrder.shippingAddress.phone ? (
+                              <span className="bg-white border border-gray-200 px-2 py-1 rounded">
+                                {selectedOrder.shippingAddress.phone}
+                              </span>
+                            ) : (
+                              <span className="text-red-400 italic">
+                                No phone number provided
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Street Address */}
+                      <div className="flex items-start mb-3">
+                        <div className="mt-1 mr-3 text-gray-500">
+                          <i className="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div>
+                          <p className="text-gray-900">
+                            {selectedOrder.shippingAddress.address ||
+                              "No address provided"}
+                          </p>
+                          <p className="text-gray-600 text-sm">
+                            {[
+                              selectedOrder.shippingAddress.city,
+                              selectedOrder.shippingAddress.zipCode,
+                              selectedOrder.shippingAddress.country,
+                            ]
+                              .filter(Boolean) // Removes empty values
+                              .join(", ")}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   ) : (
-                    <p className="text-gray-400 italic">
-                      No shipping address provided yet.
+                    <p className="text-gray-400 italic p-4 bg-gray-50 rounded">
+                      No shipping address information available.
                     </p>
                   )}
                 </div>
+                {/* END UPDATED SHIPPING ADDRESS SECTION */}
 
                 <div>
                   <h3 className="text-lg font-semibold border-b pb-2 mb-3">

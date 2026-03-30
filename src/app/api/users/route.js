@@ -1,96 +1,84 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/dbConnect";
 import bcrypt from "bcryptjs";
+import { ObjectId } from "mongodb";
+// import { auth } from "@/auth"; // Import NextAuth instance
+import { getServerSession } from "next-auth";
+import NextAuth from "next-auth";
 
-// GET all users or single user by ID
+// GET - Fetch User (Specific) OR Fetch All Users
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
-    const email = searchParams.get("email");
 
     const collection = await dbConnect("users");
 
-    if (userId) {
-      const user = await collection.findOne({ _id: userId });
-      if (!user) {
-        return NextResponse.json(
-          { success: false, message: "User not found" },
-          { status: 404 },
-        );
-      }
-      const { password, ...userWithoutPassword } = user;
+    if (!userId) {
+      const allUsers = await collection.find({}).toArray();
+      const usersWithoutPasswords = allUsers.map((user) => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+
       return NextResponse.json(
-        { success: true, data: userWithoutPassword },
+        { success: true, data: usersWithoutPasswords },
         { status: 200 },
       );
     }
 
-    if (email) {
-      const user = await collection.findOne({ email });
-      if (!user) {
-        return NextResponse.json(
-          { success: false, message: "User not found" },
-          { status: 404 },
-        );
-      }
-      const { password, ...userWithoutPassword } = user;
+    const user = await collection.findOne({ _id: new ObjectId(userId) });
+
+    if (!user) {
       return NextResponse.json(
-        { success: true, data: userWithoutPassword },
-        { status: 200 },
+        { success: false, message: "User not found" },
+        { status: 404 },
       );
     }
 
-    // Get all users (exclude passwords)
-    const users = await collection.find({}).toArray();
-    const usersWithoutPasswords = users.map(({ password, ...user }) => user);
-
+    const { password, ...userWithoutPassword } = user;
     return NextResponse.json(
-      {
-        success: true,
-        data: usersWithoutPasswords,
-        count: usersWithoutPasswords.length,
-      },
+      { success: true, data: userWithoutPassword },
       { status: 200 },
     );
   } catch (error) {
-    console.error("Error fetching users:", error);
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to fetch users",
-        error: error.message,
-      },
+      { success: false, message: error.message },
       { status: 500 },
     );
   }
 }
 
-// POST - Create new user
+// POST - Create User
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { name, email, password, role = "user", phone, address } = body;
+    const {
+      name,
+      email,
+      password,
+      role = "user",
+      phone,
+      address,
+      profileImage,
+    } = body;
 
     if (!name || !email || !password) {
       return NextResponse.json(
-        { success: false, message: "Name, email, and password are required" },
+        { success: false, message: "Missing required fields" },
         { status: 400 },
       );
     }
 
     const collection = await dbConnect("users");
-
-    // Check if user already exists
     const existingUser = await collection.findOne({ email });
     if (existingUser) {
       return NextResponse.json(
-        { success: false, message: "User with this email already exists" },
+        { success: false, message: "User already exists" },
         { status: 400 },
       );
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = {
@@ -100,6 +88,8 @@ export async function POST(request) {
       role,
       phone: phone || "",
       address: address || "",
+      profileImage: profileImage || "https://via.placeholder.com/150",
+      verified: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -111,28 +101,32 @@ export async function POST(request) {
       {
         success: true,
         message: "User created successfully",
-        data: { ...userWithoutPassword, _id: result.insertedId },
+        data: userWithoutPassword,
       },
       { status: 201 },
     );
   } catch (error) {
-    console.error("Error creating user:", error);
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to create user",
-        error: error.message,
-      },
+      { success: false, message: error.message },
       { status: 500 },
     );
   }
 }
 
-// PUT - Update user
+// PUT - Update User
 export async function PUT(request) {
   try {
     const body = await request.json();
-    const { userId, name, email, password, role, phone, address } = body;
+    const {
+      userId,
+      name,
+      email,
+      password,
+      role,
+      phone,
+      address,
+      profileImage,
+    } = body;
 
     if (!userId) {
       return NextResponse.json(
@@ -143,21 +137,20 @@ export async function PUT(request) {
 
     const collection = await dbConnect("users");
 
-    const updateData = {
-      updatedAt: new Date(),
-    };
-
+    const updateData = { updatedAt: new Date() };
     if (name) updateData.name = name;
     if (email) updateData.email = email;
     if (phone !== undefined) updateData.phone = phone;
     if (address !== undefined) updateData.address = address;
     if (role) updateData.role = role;
-    if (password) {
+    if (profileImage) updateData.profileImage = profileImage;
+
+    if (password && password.length > 0) {
       updateData.password = await bcrypt.hash(password, 10);
     }
 
     const result = await collection.updateOne(
-      { _id: userId },
+      { _id: new ObjectId(userId) },
       { $set: updateData },
     );
 
@@ -168,18 +161,28 @@ export async function PUT(request) {
       );
     }
 
+    // --- NEXTAUTH SERVER SIDE UPDATE ---
+    // This refreshes the session token for the user being updated across all devices
+    try {
+      if (name || email || role) {
+        await NextAuth.updateUser({
+          userId: userId, // The unique ID identifying the user
+          data: { name, email, role, phone, address, profileImage }, // Updated data
+        });
+      }
+    } catch (authError) {
+      console.error("Failed to update NextAuth session:", authError);
+      // Don't fail the request if Auth config is missing
+    }
+
     return NextResponse.json(
-      { success: true, message: "User updated successfully" },
+      { success: true, message: "Profile updated successfully" },
       { status: 200 },
     );
   } catch (error) {
     console.error("Error updating user:", error);
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to update user",
-        error: error.message,
-      },
+      { success: false, message: error.message },
       { status: 500 },
     );
   }
@@ -191,15 +194,14 @@ export async function DELETE(request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
 
-    if (!userId) {
+    if (!userId)
       return NextResponse.json(
-        { success: false, message: "userId is required" },
+        { success: false, message: "userId required" },
         { status: 400 },
       );
-    }
 
     const collection = await dbConnect("users");
-    const result = await collection.deleteOne({ _id: userId });
+    const result = await collection.deleteOne({ _id: new ObjectId(userId) });
 
     if (result.deletedCount === 0) {
       return NextResponse.json(
@@ -209,17 +211,12 @@ export async function DELETE(request) {
     }
 
     return NextResponse.json(
-      { success: true, message: "User deleted successfully" },
+      { success: true, message: "User deleted" },
       { status: 200 },
     );
   } catch (error) {
-    console.error("Error deleting user:", error);
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to delete user",
-        error: error.message,
-      },
+      { success: false, message: error.message },
       { status: 500 },
     );
   }

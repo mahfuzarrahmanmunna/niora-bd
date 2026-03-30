@@ -1,10 +1,10 @@
-// src/app/components/SearchResults/SearchResults.jsx
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
+import { fbq } from "@/lib/fpixel";
 
 // Wrap the component in Suspense to fix the useSearchParams warning
 function SearchResultsWrapper() {
@@ -34,7 +34,7 @@ function SearchResults() {
       try {
         setIsLoading(true);
         // Using the API endpoint from your previous examples
-        const response = await fetch("http://localhost:3000/api/products");
+        const response = await fetch("/api/products");
         if (!response.ok) {
           throw new Error("Failed to fetch products");
         }
@@ -186,7 +186,13 @@ function SearchResults() {
   // Handle add to cart
   const handleAddToCart = (e, product) => {
     e.preventDefault();
-    console.log(`Added ${product.name} to cart`);
+    fbq("track", "AddToCart", {
+      content_name: product.name,
+      content_ids: [product.id],
+      content_type: "product",
+      value: product.price,
+      currency: "BDT",
+    });
   };
 
   if (isLoading) {
@@ -260,104 +266,109 @@ function SearchResults() {
       {/* Products Grid */}
       {sortedProducts.length > 0 ? (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-          {sortedProducts.map((product) => (
-            <Link
-              href={`/product/${product._id}`}
-              key={product._id}
-              className="group"
-            >
-              <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
-                <div className="relative">
-                  <div className="w-full aspect-square bg-gray-100 relative overflow-hidden">
-                    <Image
-                      src={
-                        product.imageUrls?.[0] ||
-                        product.imageUrl ||
-                        `https://picsum.photos/seed/${product._id}/400/400.jpg`
-                      }
-                      alt={product.name || "Product"}
-                      fill
-                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      unoptimized={
-                        product.imageUrls?.[0]?.includes("example.com") ||
-                        product.imageUrl?.includes("example.com")
-                      }
-                    />
-                  </div>
-                  {product.discount > 0 && (
-                    <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
-                      -{product.discount}%
+          {sortedProducts.map((product) => {
+            // Determine the image source safely with a fallback
+            const productImage =
+              product.images?.[0] || product.imageUrls?.[0] || product.imageUrl;
+
+            // Use a placeholder if no valid image string exists
+            const imageSrc =
+              productImage && productImage.trim() !== ""
+                ? productImage
+                : "https://placehold.co/600x600/png?text=No+Image";
+
+            return (
+              <Link
+                href={`/product/${product._id}`}
+                key={product._id}
+                className="group"
+              >
+                <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
+                  <div className="relative">
+                    <div className="w-full aspect-square bg-gray-100 relative overflow-hidden">
+                      <Image
+                        src={imageSrc}
+                        alt={product.name || "Product"}
+                        fill
+                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        unoptimized={true}
+                      />
                     </div>
-                  )}
-                </div>
-
-                <div className="p-3">
-                  <p className="text-xs text-gray-500 mb-1 truncate">
-                    {product.brand || "Unknown Brand"}
-                  </p>
-                  <h3 className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">
-                    {product.name || "Unnamed Product"}
-                  </h3>
-
-                  <div className="flex items-center mb-2">
-                    {renderRating(product.rating)}
+                    {product.discount > 0 && (
+                      <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                        -{product.discount}%
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      {product.discount > 0 ? (
-                        <>
+                  <div className="p-3">
+                    <p className="text-xs text-gray-500 mb-1 truncate">
+                      {product.brand || "Unknown Brand"}
+                    </p>
+                    <h3 className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">
+                      {product.name || "Unnamed Product"}
+                    </h3>
+
+                    <div className="flex items-center mb-2">
+                      {renderRating(product.rating)}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {product.discount > 0 ? (
+                          <>
+                            <span className="text-sm font-bold text-gray-900">
+                              ${" "}
+                              {typeof product.finalPrice === "string"
+                                ? parseFloat(product.finalPrice).toFixed(2)
+                                : (product.finalPrice || 0).toFixed(2)}
+                            </span>
+                            <span className="text-xs text-gray-500 line-through ml-1">
+                              ${" "}
+                              {typeof product.price === "string"
+                                ? parseFloat(product.price).toFixed(2)
+                                : (product.price || 0).toFixed(2)}
+                            </span>
+                          </>
+                        ) : (
                           <span className="text-sm font-bold text-gray-900">
-                            $
+                            ${" "}
                             {typeof product.finalPrice === "string"
                               ? parseFloat(product.finalPrice).toFixed(2)
-                              : (product.finalPrice || 0).toFixed(2)}
+                              : (
+                                  product.finalPrice ||
+                                  product.price ||
+                                  0
+                                ).toFixed(2)}
                           </span>
-                          <span className="text-xs text-gray-500 line-through ml-1">
-                            $
-                            {typeof product.price === "string"
-                              ? parseFloat(product.price).toFixed(2)
-                              : (product.price || 0).toFixed(2)}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-sm font-bold text-gray-900">
-                          $
-                          {typeof product.finalPrice === "string"
-                            ? parseFloat(product.finalPrice).toFixed(2)
-                            : (
-                                product.finalPrice ||
-                                product.price ||
-                                0
-                              ).toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      className="p-1.5 rounded-full bg-blue-500 text-white hover:bg-blue-600 focus:outline-none transition-colors"
-                      onClick={(e) => handleAddToCart(e, product)}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+                        )}
+                      </div>
+                      <button
+                        className="p-1.5 rounded-full bg-blue-500 text-white hover:bg-blue-600 focus:outline-none transition-colors"
+                        onClick={(e) => handleAddToCart(e, product)}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      </svg>
-                    </button>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-12">

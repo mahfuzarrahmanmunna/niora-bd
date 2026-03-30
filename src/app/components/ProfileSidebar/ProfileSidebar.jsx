@@ -127,7 +127,7 @@ const ProfileSidebar = ({ user, onLogout, currentPath }) => {
           Address Book
         </Link>
 
-        <Link
+        {/* <Link
           href="/account/wishlist"
           className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
             isActive("/account/wishlist")
@@ -150,7 +150,7 @@ const ProfileSidebar = ({ user, onLogout, currentPath }) => {
             />
           </svg>
           Wishlist
-        </Link>
+        </Link> */}
       </nav>
 
       {/* Logout Button */}

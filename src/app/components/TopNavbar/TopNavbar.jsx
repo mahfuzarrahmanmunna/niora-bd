@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import {
   FaSearch,
@@ -12,78 +11,64 @@ import {
   FaBars,
   FaTimes,
   FaChevronDown,
-  FaStar,
-  FaRegStar,
-  FaSpinner,
   FaHome,
   FaBox,
   FaInfoCircle,
-  FaHeart,
   FaSignOutAlt,
   FaUserCircle,
   FaThLarge,
-} from "react-icons/fa"; // Added more icons
+  FaArrowLeft,
+} from "react-icons/fa";
 import { useCart } from "@/app/context/CartContext";
-import SearchBar from "../SearchBar/page";
+import SearchBar from "../SearchBar/page"; // Import the SearchBar component
 
 const TopNavbar = () => {
   const { data: session, status } = useSession();
   const { cartCount } = useCart();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [allProducts, setAllProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [isMobileSearchFocused, setIsMobileSearchFocused] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [allProducts, setAllProducts] = useState([]); // Needed for category counts
 
-  const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const searchContainerRef = useRef(null);
-  const mobileSearchContainerRef = useRef(null);
   const categoryDropdownRef = useRef(null);
   const profileDropdownRef = useRef(null);
-  const debounceTimerRef = useRef(null);
   const hasFetchedProductsRef = useRef(false);
 
-  const formatPrice = (price) => {
-    const numPrice = typeof price === "string" ? parseFloat(price) : price;
-    return isNaN(numPrice) ? "0.00" : numPrice.toFixed(2);
-  };
+  // Close overlays on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setIsMobileSearchFocused(false);
+  }, [pathname]);
 
+  // Fetch products for categories
   useEffect(() => {
     const fetchProducts = async () => {
       if (hasFetchedProductsRef.current) return;
       hasFetchedProductsRef.current = true;
-
       try {
-        setIsLoading(true);
         const response = await fetch("/api/products");
-        if (!response.ok) throw new Error("Failed to fetch products");
-        const data = await response.json();
-        setAllProducts(data.data || []);
-
-        const uniqueCategories = [
-          ...new Set(data.data.map((product) => product.category)),
-        ];
-        setCategories(uniqueCategories);
-        setIsLoading(false);
+        if (response.ok) {
+          const data = await response.json();
+          setAllProducts(data.data || []);
+          const uniqueCategories = [
+            ...new Set(data.data.map((product) => product.category)),
+          ];
+          setCategories(uniqueCategories);
+        }
       } catch (error) {
-        console.error("Error fetching products for search:", error);
-        setIsLoading(false);
+        console.error("Error fetching categories:", error);
       }
     };
     fetchProducts();
-
-    const query = searchParams.get("q");
-    if (query) setSearchQuery(query);
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
@@ -92,23 +77,7 @@ const TopNavbar = () => {
   }, []);
 
   useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        searchContainerRef.current &&
-        !searchContainerRef.current.contains(event.target)
-      ) {
-        setShowSuggestions(false);
-      }
-      if (
-        mobileSearchContainerRef.current &&
-        !mobileSearchContainerRef.current.contains(event.target)
-      ) {
-        setIsMobileSearchFocused(false);
-      }
       if (
         categoryDropdownRef.current &&
         !categoryDropdownRef.current.contains(event.target)
@@ -122,75 +91,9 @@ const TopNavbar = () => {
         setIsProfileDropdownOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const debouncedFilterProducts = useCallback(
-    (query) => {
-      if (query.trim() === "") {
-        setSearchResults([]);
-        setShowSuggestions(false);
-        return;
-      }
-
-      const filteredProducts = allProducts.filter((product) => {
-        const searchTerm = query.toLowerCase();
-        const name = (product.name || "").toLowerCase();
-        const brand = (product.brand || "").toLowerCase();
-        const category = (product.category || "").toLowerCase();
-
-        if (
-          name.includes(searchTerm) ||
-          brand.includes(searchTerm) ||
-          category.includes(searchTerm)
-        ) {
-          return true;
-        }
-
-        const nameWords = name.split(" ");
-        const brandWords = brand.split(" ");
-        const categoryWords = category.split(" ");
-
-        return (
-          nameWords.some((word) => word.includes(searchTerm)) ||
-          brandWords.some((word) => word.includes(searchTerm)) ||
-          categoryWords.some((word) => word.includes(searchTerm))
-        );
-      });
-
-      setSearchResults(filteredProducts.slice(0, 5));
-      setShowSuggestions(true);
-    },
-    [allProducts],
-  );
-
-  const handleSearchInputChange = (e) => {
-    const value = e.target.value;
-    setSearchQuery(value);
-
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-
-    debounceTimerRef.current = setTimeout(() => {
-      debouncedFilterProducts(value);
-    }, 300);
-  };
-
-  const handleSearch = (e) => {
-    e?.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
-      setShowSuggestions(false);
-      setIsMobileSearchFocused(false);
-      setIsMobileMenuOpen(false);
-    }
-  };
-
-  const handleSuggestionClick = () => {
-    setShowSuggestions(false);
-    setIsMobileSearchFocused(false);
-  };
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -205,26 +108,6 @@ const TopNavbar = () => {
   const handleSignOut = async () => {
     await signOut({ redirect: false });
     router.push("/");
-  };
-
-  const renderRating = (rating) => {
-    const ratingValue = parseFloat(rating) || 0;
-    const fullStars = Math.floor(ratingValue);
-    const hasHalfStar = ratingValue % 1 !== 0;
-    const emptyStars = 5 - Math.ceil(ratingValue);
-
-    return (
-      <div className="flex items-center">
-        {[...Array(fullStars)].map((_, i) => (
-          <FaStar key={`full-${i}`} className="w-3 h-3 text-yellow-400" />
-        ))}
-        {hasHalfStar && <FaStar className="w-3 h-3 text-yellow-400" />}
-        {[...Array(emptyStars)].map((_, i) => (
-          <FaRegStar key={`empty-${i}`} className="w-3 h-3 text-gray-300" />
-        ))}
-        <span className="ml-1 text-xs text-gray-600">({ratingValue})</span>
-      </div>
-    );
   };
 
   const navLinks = [
@@ -447,7 +330,7 @@ const TopNavbar = () => {
                 )}
               </Link>
 
-              {/* Mobile Search Trigger (New) */}
+              {/* Mobile Search Trigger (Icon Only) */}
               <button
                 onClick={() => setIsMobileSearchFocused(true)}
                 className="md:hidden p-2 rounded-full text-gray-600 hover:text-indigo-600 hover:bg-gray-100"
@@ -591,14 +474,6 @@ const TopNavbar = () => {
                 <FaBox className="w-5 h-5" />
                 <span>My Orders</span>
               </Link>
-              <Link
-                href="/wishlist"
-                onClick={toggleMobileMenu}
-                className="flex items-center space-x-3 px-4 py-3 text-base text-gray-700 hover:bg-gray-50 rounded-lg"
-              >
-                <FaHeart className="w-5 h-5" />
-                <span>Wishlist</span>
-              </Link>
               {session.user.role === "admin" && (
                 <Link
                   href="/dashboard"
@@ -624,139 +499,30 @@ const TopNavbar = () => {
         </div>
       </div>
 
-      {/* --- MOBILE SEARCH OVERLAY --- */}
+      {/* --- MOBILE SEARCH OVERLAY (Using SearchBar Component) --- */}
       {isMobileSearchFocused && (
         <div className="fixed inset-0 z-[60] bg-white md:hidden flex flex-col animate-in fade-in slide-in-from-top-4 duration-200">
-          {/* Search Header */}
+          {/* Overlay Header with Cancel Button */}
           <div className="flex items-center p-4 border-b border-gray-100 shadow-sm bg-white sticky top-0 z-10">
             <button
               onClick={() => setIsMobileSearchFocused(false)}
-              className="text-sm font-medium text-gray-500 hover:text-gray-900 mr-4"
+              className="mr-3 text-gray-500 hover:text-gray-900 flex items-center"
             >
-              Cancel
+              <FaArrowLeft className="h-5 w-5" />
+              <span className="ml-1 text-sm font-medium">Back</span>
             </button>
-            <form onSubmit={handleSearch} className="flex-1">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={handleSearchInputChange}
-                  placeholder="Search products..."
-                  className="w-full px-4 py-2.5 text-base text-gray-900 bg-gray-100 border-transparent rounded-full focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all"
-                  autoFocus
-                />
-                <button
-                  type="submit"
-                  className="absolute inset-y-0 right-0 flex items-center pr-3"
-                >
-                  {isLoading ? (
-                    <FaSpinner className="h-5 w-5 text-indigo-500 animate-spin" />
-                  ) : (
-                    <FaSearch className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
-              </div>
-            </form>
+
+            {/* --- RENDERING THE SEARCHBAR COMPONENT HERE --- */}
+            <div className="flex-1">
+              <SearchBar
+                placeholder="Search products..."
+                onLinkClick={() => setIsMobileSearchFocused(false)} // Closes this overlay when a result is clicked
+              />
+            </div>
           </div>
 
-          {/* Search Results */}
-          <div className="flex-1 overflow-y-auto bg-gray-50">
-            {showSuggestions && searchResults.length > 0 ? (
-              <div className="p-2">
-                <ul className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                  {searchResults.map((product) => (
-                    <li key={product._id}>
-                      <Link
-                        href={`/product/${product._id}`}
-                        className="block px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-0 flex items-center"
-                        onClick={handleSuggestionClick}
-                      >
-                        <div className="relative w-16 h-16 mr-4 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
-                          {/* Real Image Logic */}
-                          <Image
-                            src={
-                              product.imageUrls && product.imageUrls.length > 0
-                                ? product.imageUrls[0]
-                                : product.imageUrl ||
-                                  `https://picsum.photos/seed/${product._id}/100/100.jpg`
-                            }
-                            alt={product.name || "Product"}
-                            fill
-                            sizes="64px"
-                            className="object-cover"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">
-                            {product.name || "Unnamed Product"}
-                          </p>
-                          <p className="text-xs text-gray-500 mb-1">
-                            {product.brand || "Unknown Brand"}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              {renderRating(product.rating)}
-                            </div>
-                            <div className="text-right">
-                              {product.discount > 0 ? (
-                                <>
-                                  <span className="text-sm font-bold text-gray-900">
-                                    ${formatPrice(product.finalPrice)}
-                                  </span>
-                                  <span className="text-xs text-gray-400 line-through ml-1 block">
-                                    ${formatPrice(product.price)}
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="text-sm font-bold text-gray-900">
-                                  $
-                                  {formatPrice(
-                                    product.finalPrice || product.price,
-                                  )}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-3 px-2">
-                  <button
-                    onClick={handleSearch}
-                    className="w-full text-center text-sm text-indigo-600 font-medium py-2.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 transition-colors"
-                  >
-                    View all results for`{searchQuery}`
-                  </button>
-                </div>
-              </div>
-            ) : showSuggestions && searchQuery && !isLoading ? (
-              <div className="flex flex-col items-center justify-center h-64 text-center px-6">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <FaSearch className="w-6 h-6 text-gray-400" />
-                </div>
-                <p className="text-gray-900 font-medium text-lg mb-1">
-                  No products found
-                </p>
-                <p className="text-gray-500 text-sm">
-                  Try checking your spelling or using different keywords
-                </p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-64 text-center px-6">
-                <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mb-4">
-                  <FaSearch className="w-6 h-6 text-indigo-400" />
-                </div>
-                <p className="text-gray-900 font-medium text-lg mb-1">
-                  What are you looking for?
-                </p>
-                <p className="text-gray-500 text-sm">
-                  Search for products, brands and more
-                </p>
-              </div>
-            )}
-          </div>
+          {/* Optional: Empty state or helper text below the search bar */}
+          <div className="flex-1 bg-gray-50"></div>
         </div>
       )}
     </>
