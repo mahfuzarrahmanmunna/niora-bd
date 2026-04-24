@@ -26,14 +26,9 @@ export default function OrderConfirmationClient() {
   const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
-    if (!orderId) {
-      setError("Order ID is missing. We couldn't identify your order.");
-      setLoading(false);
-      return;
-    }
-
-    if (orderId === "null" || orderId === "undefined") {
-      setError("Invalid Order ID provided.");
+    // Validate Order ID
+    if (!orderId || orderId === "null" || orderId === "undefined") {
+      setError("Invalid Order ID.");
       setLoading(false);
       return;
     }
@@ -41,24 +36,70 @@ export default function OrderConfirmationClient() {
     const fetchOrder = async () => {
       try {
         setLoading(true);
-        setError(null);
-
         const response = await fetch(`/api/manage-my-order/${orderId}`);
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch order details.");
-        }
-
         const data = await response.json();
 
         if (data.success && data.data) {
-          setOrderData(data.data);
+          const order = data.data;
+          setOrderData(order);
+
+          // ✅ FACEBOOK PIXEL
+          if (window.fbq) {
+            window.fbq("track", "Purchase", {
+              value: order.totalAmount || order.totalPrice || 0,
+              currency: "BDT",
+            });
+          }
+
+          // ✅ GOOGLE TAG MANAGER DATA LAYER
+          window.dataLayer = window.dataLayer || [];
+          window.dataLayer.push({
+            event: "purchase",
+            ecommerce: {
+              transaction_id: order._id,
+              value: order.totalPrice,
+              currency: "BDT",
+              tax: 0,
+              shipping: 0,
+              items: order.items?.map((item, index) => ({
+                item_id: item.productId,
+                item_name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                index: index + 1,
+              })),
+              orderData: {
+                attributes: {
+                  date: order.createdAt,
+                  order_number: order._id,
+                  payment_method: order.paymentMethod || "cod",
+                  status: order.status,
+                  customer: {
+                    name: order.shippingAddress?.name,
+                    phone: order.shippingAddress?.phone,
+                    address: order.shippingAddress?.address,
+                  },
+                },
+                shipping: {
+                  first_name: order.shippingAddress?.name,
+                  address_1: order.shippingAddress?.address,
+                  country: order.shippingAddress?.country,
+                },
+                totals: {
+                  currency: "BDT",
+                  total: order.totalPrice,
+                  subtotal: order.totalPrice,
+                  shipping: 0,
+                  discount: 0,
+                },
+              },
+            },
+          });
         } else {
-          throw new Error(data.message || "Order not found.");
+          throw new Error("Order not found.");
         }
       } catch (err) {
-        console.error("Error fetching order:", err);
-        setError(err.message || "Something went wrong.");
+        setError(err.message);
       } finally {
         setLoading(false);
       }
@@ -72,11 +113,9 @@ export default function OrderConfirmationClient() {
     if (!orderId) return;
 
     try {
-      // Modern Clipboard API
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(orderId);
       } else {
-        // Fallback for older browsers
         const textArea = document.createElement("textarea");
         textArea.value = orderId;
         document.body.appendChild(textArea);
@@ -85,7 +124,6 @@ export default function OrderConfirmationClient() {
         document.body.removeChild(textArea);
       }
 
-      // Show visual feedback
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     } catch (err) {
@@ -146,10 +184,10 @@ export default function OrderConfirmationClient() {
 
         {/* Order Details Section */}
         <div className="p-8 space-y-6">
-          {/* Order ID Box (WITH COPY FUNCTIONALITY) */}
+          {/* Order ID Box */}
           <div
             onClick={handleCopyOrderId}
-            className="bg-gray-50 border border-gray-200 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition group relative"
+            className="bg-gray-50 border border-gray-200 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition group"
             title="Click to copy Order ID"
           >
             <div className="text-left">
@@ -158,7 +196,6 @@ export default function OrderConfirmationClient() {
               </p>
               <div className="flex items-center gap-2 mt-1">
                 <p className="text-lg font-bold text-gray-900 font-mono">
-                  {/* Display truncated ID for UI cleanliness */}
                   {orderId ? orderId.substring(0, 12) + "..." : "N/A"}
                 </p>
                 {isCopied ? (

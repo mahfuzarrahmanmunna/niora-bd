@@ -250,57 +250,72 @@ const CartPage = () => {
   ).toFixed(2);
 
   const handleCheckout = async () => {
-    try {
-      setIsCheckingOut(true);
+  try {
+    setIsCheckingOut(true);
 
-      if (cartItems.length === 0) {
-        alert("Your cart is empty");
-        return;
-      }
-
-      const userId = getUserId();
-
-      const requestData = {
-        userId,
-        items: cartItems.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          price: item.product?.finalPrice || item.product?.price || 0,
-        })),
-        // Add shipping info to order
-        shipping: {
-          location: shippingLocation,
-          cost: calculateShippingCost(),
-        },
-        totalAmount: grandTotal,
-      };
-
-      const response = await fetch("/api/manage-my-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || "Failed to create order");
-      }
-
-      // Clear cart
-      saveLocalCart([]);
-      if (setContextCartItems) {
-        setContextCartItems([]);
-      }
-
-      router.push(`/payment?orderId=${data.data._id}`);
-    } catch (error) {
-      console.error("Checkout error:", error);
-      alert(error.message || "Failed to checkout");
-    } finally {
-      setIsCheckingOut(false);
+    if (cartItems.length === 0) {
+      alert("Your cart is empty");
+      return;
     }
-  };
+
+    // --- FACEBOOK PIXEL: INITIATE CHECKOUT START ---
+    if (typeof window !== "undefined" && window.fbq) {
+      window.fbq('track', 'InitiateCheckout', {
+        content_ids: cartItems.map(item => item.productId), // কার্টে থাকা সব প্রোডাক্ট আইডি
+        content_type: 'product',
+        value: parseFloat(grandTotal) || 0, // মোট টাকা
+        currency: 'BDT',
+        num_items: cartItems.length // কয়টি আইটেম আছে
+      });
+    }
+    // --- FACEBOOK PIXEL: INITIATE CHECKOUT END ---
+
+    const userId = getUserId();
+
+    const requestData = {
+      userId,
+      items: cartItems.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.product?.finalPrice || item.product?.price || 0,
+      })),
+      // Add shipping info to order
+      shipping: {
+        location: shippingLocation,
+        cost: calculateShippingCost(),
+      },
+      totalAmount: grandTotal,
+    };
+
+    const response = await fetch("/api/manage-my-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || "Failed to create order");
+    }
+
+    // Clear cart
+    saveLocalCart([]);
+    if (setContextCartItems) {
+      setContextCartItems([]);
+    }
+
+    // Success হলে পেমেন্ট পেজে পাঠিয়ে দেওয়া
+    router.push(`/payment?orderId=${data.data._id}`);
+    
+  } catch (error) {
+    console.error("Checkout error:", error);
+    alert(error.message || "Failed to checkout");
+  } finally {
+    setIsCheckingOut(false);
+  }
+};
+
 
   if (isLoading) {
     return (

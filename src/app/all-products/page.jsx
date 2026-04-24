@@ -173,7 +173,7 @@ const AllProductsPage = () => {
       try {
         // Adding page parameter to the API call
         const response = await fetch(
-          `/api/products?page=${currentPage}&limit=10`,
+          `/api/products?page=${currentPage}&limit=20`,
         );
         if (!response.ok) {
           throw new Error("Failed to fetch products");

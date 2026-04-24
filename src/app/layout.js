@@ -1,7 +1,7 @@
 // src/app/layout.js
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Script from "next/script"; // <--- Added Script import
+import Script from "next/script";
 import Providers from "@/provider/Provider";
 import LayoutContent from "@/provider/LayoutContent";
 
@@ -21,7 +21,7 @@ export const metadata = {
     template: "%s | Dilidoor",
   },
   description:
-    "Shop the latest trends in fashion, cosmetics, and accessories at Dilodoor. Discover top brands like Nike, Zara, and more with exclusive deals and fast delivery.",
+    "Shop the latest trends in fashion, cosmetics, and accessories at Dilidoor. Discover top brands like Nike, Zara, and more with exclusive deals and fast delivery.",
   keywords: [
     "Dilidoor",
     "Online Shopping",
@@ -35,7 +35,7 @@ export const metadata = {
   ],
   authors: [{ name: "Dilidoor" }],
   openGraph: {
-    title: "Dilodoor",
+    title: "Dilidoor",
     description:
       "Shop the latest trends in fashion, cosmetics, and accessories at Dilidoor.",
     type: "website",
@@ -44,7 +44,7 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Dilodoor",
+    title: "Dilidoor",
     description:
       "Shop the latest trends in fashion, cosmetics, and accessories at Dilidoor.",
   },
@@ -58,37 +58,61 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        cz-shortcut-listen="true"
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-100 text-gray-900 min-h-screen`}
       >
-        {/* --- FACEBOOK PIXEL CODE START --- */}
+        {/* --- GOOGLE TAG MANAGER 1 START --- */}
         <Script
-          id="facebook-pixel"
+          id="google-tag-manager"
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              !function(f,b,e,v,n,t,s)
-              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-              n.queue=[];t=b.createElement(e);t.async=!0;
-              t.src=v;s=b.getElementsByTagName(e)[0];
-              s.parentNode.insertBefore(t,s)}(window, document,'script',
-              'https://connect.facebook.net/en_US/fbevents.js');
-              fbq('init', '1447847387033366');
-              fbq('track', 'PageView');
+              (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+              new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+              j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+              'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+              })(window,document,'script','dataLayer','GTM-PX47H7CH');
             `,
           }}
         />
         <noscript>
-          <img
-            height="1"
-            width="1"
-            style={{ display: "none" }}
-            src="https://www.facebook.com/tr?id=1447847387033366&ev=PageView&noscript=1"
-          />
+          <iframe
+            src="https://www.googletagmanager.com/ns.html?id=GTM-PX47H7CH"
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          ></iframe>
         </noscript>
-        {/* --- FACEBOOK PIXEL CODE END --- */}
+        {/* --- GOOGLE TAG MANAGER 1 END --- */}
+
+        {/* --- GOOGLE TAG MANAGER 2 START --- */}
+        <Script
+          id="google-tag-manager-new"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+              new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+              j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+              'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+              })(window,document,'script','dataLayer','GTM-N4533L2S');
+            `,
+          }}
+        />
+        <noscript>
+          <iframe
+            src="https://www.googletagmanager.com/ns.html?id=GTM-N4533L2S"
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          ></iframe>
+        </noscript>
+        {/* --- GOOGLE TAG MANAGER 2 END --- */}
+
+        {/* 
+           I REMOVED THE FACEBOOK PIXEL CODE FROM HERE. 
+           It should be managed inside your Google Tag Manager account 
+           to avoid the "Duplicate Pixel" error.
+        */}
 
         <Providers>
           <LayoutContent>{children}</LayoutContent>

@@ -5,6 +5,7 @@ import AllProducts from "./components/AllProducts/AllProducts";
 // import AllCategoryPage from "./components/Category/AllCategoryPage";
 // import CategoryPage from "./category/[slug]/page";
 import CategoriesSection from "./components/Category/AllCategoryPage";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -15,6 +16,7 @@ export default function Home() {
       {/* <CategoryPage /> */}
       <PopularProduct />
       <AllProducts />
+
     </div>
   );
 }
