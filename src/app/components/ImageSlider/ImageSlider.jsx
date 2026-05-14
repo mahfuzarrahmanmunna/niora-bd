@@ -1,61 +1,42 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React from "react";
 import Link from "next/link";
-// Import Swiper React components
 import { Swiper, SwiperSlide } from "swiper/react";
-
-// --- FIXED IMPORTS ---
-// Make sure these file paths match the actual files in your assets folder
-import acce from "./assets/acce.png";
-import cloth from "./assets/cloth.png";
-import beauty from "./assets/beauty.png";
-import electronics from "./assets/electronics.png";
-import others from "./assets/others.png";
 
 // Import Swiper styles
 import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/navigation";
 
-// import required modules
+// Import required modules
 import { Pagination, Navigation, Autoplay } from "swiper/modules";
 
 export default function ImageSlider() {
-  // --- SET YOUR TIME HERE (in milliseconds) ---
   const SLIDE_DURATION = 2000;
 
-  // Your Categories
-  const categories = [
-    { value: "cosmetics", label: "Cosmetics" },
-    { value: "clothing", label: "Clothing" },
-    { value: "shoes", label: "Shoes" },
-    { value: "blankets", label: "Blankets" },
-    { value: "accessories", label: "Accessories" },
-    { value: "electronics", label: "Electronics" }, // Added because you imported the image
-    { value: "other", label: "Other" },
+  const slides = [
+    {
+      id: "cosmetics",
+      title: "Cosmetics",
+      description: "Explore our latest Cosmetics collection.",
+      image: "/gallery1.jpeg",
+      link: "/products?category=cosmetics",
+    },
+    {
+      id: "clothing",
+      title: "Clothing",
+      description: "Explore our latest Clothing collection.",
+      image: "/gallery2.jpeg",
+      link: "/products?category=clothing",
+    },
+    {
+      id: "shoes",
+      title: "Shoes",
+      description: "Explore our latest Shoes collection.",
+      image: "/gallery3.jpeg",
+      link: "/products?category=shoes",
+    },
   ];
-
-  // Mapping Categories to Images and Links
-  const slides = categories.map((cat) => {
-    let selectedImage = others; // Default fallback image
-
-    // Map specific category values to your imported assets
-    if (cat.value === "cosmetics") selectedImage = beauty;
-    else if (cat.value === "clothing") selectedImage = cloth;
-    else if (cat.value === "accessories") selectedImage = acce;
-    else if (cat.value === "electronics") selectedImage = electronics;
-    // 'shoes', 'blankets', and 'other' will use the 'others' image automatically
-
-    return {
-      id: cat.value,
-      title: cat.label,
-      description: `Explore our latest ${cat.label} collection.`,
-      // Use .src because we are using a standard <img> tag in Next.js
-      image: selectedImage.src,
-      // Create the link format you requested: /products?category=accessories
-      link: `/products?category=${cat.value}`,
-    };
-  });
 
   return (
     <>
@@ -70,7 +51,7 @@ export default function ImageSlider() {
         <Swiper
           navigation={false}
           pagination={{
-            clickable: true, // Enabled clickable bullets
+            clickable: true,
             dynamicBullets: false,
           }}
           modules={[Pagination, Navigation, Autoplay]}

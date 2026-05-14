@@ -1,74 +1,103 @@
-// app/api/manage-my-order/cod/route.js
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/dbConnect";
 import { ObjectId } from "mongodb";
 
 export async function POST(request) {
   try {
-    const { orderId, customerInfo } = await request.json();
+    const { customerInfo, items, totalPrice, shippingCost, shippingLocation } =
+      await request.json();
 
-    if (!orderId) {
+    // ✅ এখন items এবং customerInfo আবশ্যক, orderId নয়
+    if (!items || items.length === 0) {
       return NextResponse.json(
-        { success: false, message: "Order ID is required" },
+        { success: false, message: "Items are required" },
         { status: 400 },
       );
     }
 
-    // Connect to database
+    if (!customerInfo || !customerInfo.name || !customerInfo.phone) {
+      return NextResponse.json(
+        { success: false, message: "Customer name and phone are required" },
+        { status: 400 },
+      );
+    }
+
     const ordersCollection = await dbConnect("orders");
 
-    // Check if the order exists
-    let order;
-    try {
-      // Try to find by ObjectId first
-      if (ObjectId.isValid(orderId)) {
-        order = await ordersCollection.findOne({ _id: new ObjectId(orderId) });
+    // ✅ ইউজার আইডি তৈরি (ফোন নম্বর দিয়ে বা guest হিসেবে)
+    const userId = customerInfo.phone || "guest-" + Date.now();
+
+    // ✅ প্রোডাক্ট ভেরিফাই করুন (ঐচ্ছিক কিন্তু রিকমেন্ডেড)
+    const verifiedItems = [];
+    let calculatedTotal = 0;
+
+    for (const item of items) {
+      const productsCollection = await dbConnect("products");
+      let product = null;
+
+      try {
+        if (
+          typeof item.productId === "string" &&
+          ObjectId.isValid(item.productId)
+        ) {
+          product = await productsCollection.findOne({
+            _id: new ObjectId(item.productId),
+          });
+        }
+        if (!product) {
+          product = await productsCollection.findOne({ id: item.productId });
+        }
+      } catch (e) {
+        // Ignore lookup error
       }
 
-      // If not found, try to find by string ID field
-      if (!order) {
-        order = await ordersCollection.findOne({ id: orderId });
+      if (product) {
+        const itemPrice = product.finalPrice || product.price;
+        calculatedTotal += itemPrice * item.quantity;
+        verifiedItems.push({
+          productId: product._id ? product._id.toString() : product.id,
+          name: product.name,
+          price: itemPrice,
+          quantity: item.quantity,
+          imageUrl: product.imageUrl || item.imageUrl || "",
+        });
+      } else {
+        // প্রোডাক্ট খুঁজে না পাওয়া গেলে যা আছে তাই ব্যবহার করুন
+        verifiedItems.push({
+          productId: item.productId,
+          name: item.name || "Unknown Product",
+          price: item.price || 0,
+          quantity: item.quantity || 1,
+          imageUrl: item.imageUrl || "",
+        });
+        calculatedTotal += (item.price || 0) * (item.quantity || 1);
       }
-    } catch (error) {
-      console.error("Error finding order:", error);
-      return NextResponse.json(
-        { success: false, message: "Invalid order ID format" },
-        { status: 400 },
-      );
     }
 
-    if (!order) {
-      return NextResponse.json(
-        { success: false, message: "Order not found" },
-        { status: 404 },
-      );
-    }
+    // ✅ ডাটাবেসে নতুন অর্ডার তৈরি করুন
+    const newOrder = {
+      userId,
+      items: verifiedItems,
+      totalPrice: totalPrice || calculatedTotal,
+      shippingCost: shippingCost || 0,
+      shippingLocation: shippingLocation || "inside",
+      paymentMethod: "cod",
+      shippingAddress: customerInfo,
+      status: "pending",
+      paymentStatus: "pending",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
-    // Update the order with customer info and COD payment method
-    const result = await ordersCollection.updateOne(
-      { _id: order._id },
-      {
-        $set: {
-          paymentMethod: "cod",
-          shippingAddress: customerInfo,
-          status: "confirmed",
-          paymentStatus: "pending",
-          updatedAt: new Date(),
-        },
-      },
-    );
-
-    if (result.matchedCount === 0) {
-      return NextResponse.json(
-        { success: false, message: "Failed to update order" },
-        { status: 500 },
-      );
-    }
+    const result = await ordersCollection.insertOne(newOrder);
 
     return NextResponse.json({
       success: true,
       message: "Order confirmed with Cash on Delivery",
-      orderId: orderId,
+      data: {
+        ...newOrder,
+        _id: result.insertedId.toString(),
+      },
     });
   } catch (error) {
     console.error("Error processing COD order:", error);

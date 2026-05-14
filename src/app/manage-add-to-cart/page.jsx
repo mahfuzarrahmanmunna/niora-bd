@@ -235,7 +235,6 @@ const CartPage = () => {
             ? parseFloat(product.shipping.insideDhaka) || 0
             : parseFloat(product.shipping.outsideDhaka) || 0;
 
-        // Logic: Usually you pay the highest shipping cost in the cart for the whole order
         if (cost > maxShipping) {
           maxShipping = cost;
         }
@@ -249,73 +248,105 @@ const CartPage = () => {
     parseFloat(calculateSubtotal()) + calculateShippingCost()
   ).toFixed(2);
 
+  // ============================================================
+  // ✅ HANDLE CHECKOUT - Save to localStorage, NOT to database
+  // ============================================================
   const handleCheckout = async () => {
-  try {
-    setIsCheckingOut(true);
+    try {
+      setIsCheckingOut(true);
 
-    if (cartItems.length === 0) {
-      alert("Your cart is empty");
-      return;
+      if (cartItems.length === 0) {
+        alert("Your cart is empty");
+        return;
+      }
+
+      // --- FACEBOOK PIXEL: INITIATE CHECKOUT ---
+      if (typeof window !== "undefined" && window.fbq) {
+        window.fbq("track", "InitiateCheckout", {
+          content_ids: cartItems.map((item) => item.productId),
+          content_type: "product",
+          value: parseFloat(grandTotal) || 0,
+          currency: "BDT",
+          num_items: cartItems.length,
+        });
+      }
+
+      // ============================================================
+      // ✅ GOOGLE TAG MANAGER: BEGIN CHECKOUT EVENT
+      // ============================================================
+      if (typeof window !== "undefined" && window.dataLayer) {
+        // Map cart items to GA4 standard item format
+        const gtmItems = cartItems.map((item, index) => {
+          const price = parseFloat(
+            item.product?.finalPrice || item.product?.price || 0,
+          );
+
+          return {
+            item_id: item.productId,
+            item_name: item.product?.name || "Unknown Product",
+            affiliation: "Online Store",
+            coupon: "",
+            discount: item.product?.discount
+              ? (item.product.price - item.product.finalPrice).toFixed(2)
+              : "0.00",
+            index: index,
+            item_brand: item.product?.brand || "Unknown Brand",
+            item_category: item.product?.category || "",
+            item_list_id: "shopping_cart",
+            item_list_name: "Shopping Cart",
+            item_variant: "",
+            location_id: "",
+            price: price.toFixed(2),
+            quantity: item.quantity,
+          };
+        });
+
+        // Push event to Data Layer
+        window.dataLayer.push({
+          event: "begin_checkout",
+          ecommerce: {
+            currency: "BDT",
+            value: parseFloat(grandTotal).toFixed(2),
+            items: gtmItems,
+          },
+        });
+
+        console.log("GTM Event Pushed: begin_checkout", window.dataLayer);
+      }
+      // ============================================================
+
+      // ============================================================
+      // ✅ পরিবর্তন: ডাটাবেসে POST না করে localStorage এ সেভ করুন
+      // ============================================================
+      const orderDetails = {
+        items: cartItems.map((item) => ({
+          productId: item.productId,
+          name: item.product?.name,
+          price: item.product?.finalPrice || item.product?.price || 0,
+          quantity: item.quantity,
+          imageUrl:
+            item.product?.images?.[0] ||
+            item.product?.imageUrls?.[0] ||
+            item.product?.imageUrl ||
+            "",
+        })),
+        totalPrice: parseFloat(grandTotal),
+        shippingCost: calculateShippingCost(),
+        shippingLocation: shippingLocation,
+        createdAt: new Date().toISOString(),
+      };
+
+      localStorage.setItem("pendingOrder", JSON.stringify(orderDetails));
+
+      // ✅ orderId ছাড়া পেমেন্ট পেজে রিডাইরেক্ট করুন
+      router.push("/payment");
+    } catch (error) {
+      console.error("Checkout error:", error);
+      alert(error.message || "Failed to proceed to checkout");
+    } finally {
+      setIsCheckingOut(false);
     }
-
-    // --- FACEBOOK PIXEL: INITIATE CHECKOUT START ---
-    if (typeof window !== "undefined" && window.fbq) {
-      window.fbq('track', 'InitiateCheckout', {
-        content_ids: cartItems.map(item => item.productId), // কার্টে থাকা সব প্রোডাক্ট আইডি
-        content_type: 'product',
-        value: parseFloat(grandTotal) || 0, // মোট টাকা
-        currency: 'BDT',
-        num_items: cartItems.length // কয়টি আইটেম আছে
-      });
-    }
-    // --- FACEBOOK PIXEL: INITIATE CHECKOUT END ---
-
-    const userId = getUserId();
-
-    const requestData = {
-      userId,
-      items: cartItems.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        price: item.product?.finalPrice || item.product?.price || 0,
-      })),
-      // Add shipping info to order
-      shipping: {
-        location: shippingLocation,
-        cost: calculateShippingCost(),
-      },
-      totalAmount: grandTotal,
-    };
-
-    const response = await fetch("/api/manage-my-order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestData),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      throw new Error(data.message || "Failed to create order");
-    }
-
-    // Clear cart
-    saveLocalCart([]);
-    if (setContextCartItems) {
-      setContextCartItems([]);
-    }
-
-    // Success হলে পেমেন্ট পেজে পাঠিয়ে দেওয়া
-    router.push(`/payment?orderId=${data.data._id}`);
-    
-  } catch (error) {
-    console.error("Checkout error:", error);
-    alert(error.message || "Failed to checkout");
-  } finally {
-    setIsCheckingOut(false);
-  }
-};
-
+  };
 
   if (isLoading) {
     return (
@@ -411,7 +442,6 @@ const CartPage = () => {
                   >
                     <div className="w-24 h-24 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                       <Image
-                        // UPDATED: Checks 'images' array first (matching your JSON), then fallbacks
                         src={
                           item.product?.images?.[0] ||
                           item.product?.imageUrls?.[0] ||

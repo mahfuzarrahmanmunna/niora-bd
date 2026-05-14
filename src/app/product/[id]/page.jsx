@@ -1,5 +1,3 @@
-// src/app/product/[id]
-
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
@@ -26,13 +24,22 @@ import {
 import { useCart } from "@/app/context/CartContext";
 import { fbq } from "@/lib/fpixel";
 
+// ============================================================
+// HELPER: Push DataLayer with ecommerce clear (GA4 Best Practice)
+// ============================================================
+const pushDataLayer = (eventData) => {
+  if (typeof window === "undefined") return;
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({ ecommerce: null }); // Clear previous ecommerce
+  window.dataLayer.push(eventData);
+};
+
 const ProductDetails = () => {
   const { addToCart } = useCart();
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(false);
 
-  // New state for staggered loading of related products
   const [visibleRelatedCount, setVisibleRelatedCount] = useState(0);
 
   const [selectedImage, setSelectedImage] = useState(0);
@@ -49,7 +56,6 @@ const ProductDetails = () => {
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
   const [expandedSpecs, setExpandedSpecs] = useState(false);
 
-  // State for Shipping Location
   const [shippingLocation, setShippingLocation] = useState("inside");
 
   const fileInputRef = useRef(null);
@@ -66,19 +72,20 @@ const ProductDetails = () => {
   });
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const reviewsPerPage = 6;
 
   const params = useParams();
 
+  // ============================================================
+  // 🔥 VIEW_ITEM DATALAYER — Fires when product page loads
+  // ============================================================
   useEffect(() => {
     const fetchProductData = async () => {
       try {
         setIsLoading(true);
 
-        // Fetch product by ID directly
         const productResponse = await fetch(`/api/products/${params.id}`);
 
         if (!productResponse.ok) {
@@ -93,7 +100,6 @@ const ProductDetails = () => {
 
         const foundProduct = productData.data;
 
-        // Ensure the product has both id and _id fields
         if (foundProduct._id && !foundProduct.id) {
           foundProduct.id = foundProduct._id.toString();
         } else if (foundProduct.id && !foundProduct._id) {
@@ -102,27 +108,75 @@ const ProductDetails = () => {
 
         setProduct(foundProduct);
 
-        // --- UNCOMMENTED: Fetch all products to find related ones ---
-        // const allProductsResponse = await fetch("/api/products");
-        // if (allProductsResponse.ok) {
-        //   const allProductsData = await allProductsResponse.json();
+        // ✅ VIEW_ITEM DATALAYER (GA4)
+        pushDataLayer({
+          event: "view_item",
+          ecommerce: {
+            currency: "BDT",
+            value: foundProduct.finalPrice || foundProduct.price || 0,
+            items: [
+              {
+                item_id: foundProduct._id || foundProduct.id,
+                item_name: foundProduct.name,
+                item_brand: foundProduct.brand || "",
+                item_category: foundProduct.category || "",
+                item_category2: foundProduct.subCategory || "",
+                item_category3: foundProduct.material || "",
+                item_variant: foundProduct.color || foundProduct.shade || "",
+                price: foundProduct.finalPrice || foundProduct.price || 0,
+                currency: "BDT",
+                quantity: 1,
+                discount: foundProduct.discount || 0,
+                index: 1,
 
-        //   let allProducts = [];
-        //   if (allProductsData.success && Array.isArray(allProductsData.data)) {
-        //     allProducts = allProductsData.data;
-        //   }
+                // ✅ EXTRA INFO (for custom reporting)
+                item_stock: foundProduct.stock || 0,
+                item_volume: foundProduct.volume || "",
+                item_skin_type: foundProduct.skinType || "",
+                item_rating: foundProduct.rating || 0,
+                item_url: `/product/${foundProduct._id || foundProduct.id}`,
+                item_image:
+                  foundProduct.images?.[0] ||
+                  foundProduct.imageUrls?.[0] ||
+                  foundProduct.imageUrl ||
+                  "",
+              },
+            ],
 
-        //   // Get related products from same category
-        //   const related = allProducts
-        //     .filter(
-        //       (p) =>
-        //         p.category === foundProduct.category &&
-        //         p._id !== foundProduct._id, // Ensure strict comparison
-        //     )
-        //     .slice(0, 8); // Limit to 8 related products
+            // ✅ FULL PRODUCT CONTEXT
+            product_details: {
+              original_price: foundProduct.price || 0,
+              discounted_price: foundProduct.finalPrice || 0,
+              savings_amount:
+                (foundProduct.price || 0) -
+                (foundProduct.finalPrice || foundProduct.price || 0),
+              discount_percentage: foundProduct.discount || 0,
+              in_stock: (foundProduct.stock || 0) > 0,
+              stock_quantity: foundProduct.stock || 0,
+              shipping_inside_dhaka: foundProduct.shipping?.insideDhaka || 0,
+              shipping_outside_dhaka: foundProduct.shipping?.outsideDhaka || 0,
+              features_count: Array.isArray(foundProduct.features)
+                ? foundProduct.features.length
+                : 0,
+              sizes_available: Array.isArray(foundProduct.sizes)
+                ? foundProduct.sizes
+                : [],
+              reviews_count: 0, // Will be updated after reviews fetch
+            },
+          },
+        });
 
-        //   setRelatedProducts(related);
-        // }
+        // ✅ FACEBOOK PIXEL — ViewContent
+        if (typeof window !== "undefined" && window.fbq) {
+          window.fbq("track", "ViewContent", {
+            content_ids: [foundProduct._id],
+            content_name: foundProduct.name,
+            content_type: "product",
+            content_category: foundProduct.category,
+            value: foundProduct.finalPrice || foundProduct.price,
+            currency: "BDT",
+          });
+        }
 
         setIsLoading(false);
       } catch (err) {
@@ -136,26 +190,22 @@ const ProductDetails = () => {
 
   // --- STAGGERED REVEAL EFFECT FOR RELATED PRODUCTS ---
   useEffect(() => {
-    // Only start if we have related products loaded and haven't shown them all yet
     if (
       relatedProducts.length > 0 &&
       visibleRelatedCount < relatedProducts.length
     ) {
       const timer = setTimeout(() => {
         setVisibleRelatedCount((prev) => prev + 1);
-      }, 150); // 150ms delay between each product
-
+      }, 150);
       return () => clearTimeout(timer);
     }
   }, [relatedProducts, visibleRelatedCount]);
 
-  // Fetch reviews separately with proper encoding
+  // Fetch reviews separately
   useEffect(() => {
     const fetchReviews = async () => {
       try {
         setReviewsLoading(true);
-
-        // Ensure productId is properly encoded for API call
         const encodedProductId = encodeURIComponent(params.id);
         const reviewsResponse = await fetch(
           `/api/reviews?productId=${encodedProductId}`,
@@ -169,7 +219,6 @@ const ProductDetails = () => {
 
         if (reviewsData.success && reviewsData.data) {
           setReviews(reviewsData.data);
-          // Calculate total pages for pagination
           setTotalPages(Math.ceil(reviewsData.data.length / reviewsPerPage));
         } else {
           setReviews([]);
@@ -189,7 +238,6 @@ const ProductDetails = () => {
     }
   }, [params.id]);
 
-  // Reset to page 1 when switching tabs
   useEffect(() => {
     if (activeTab === "reviews") {
       setCurrentPage(1);
@@ -223,10 +271,17 @@ const ProductDetails = () => {
     );
   };
 
+  // ============================================================
+  // 🔥 ADD TO CART — DATALAYER + FB PIXEL
+  // ============================================================
   const handleAddToCart = async () => {
     if (!product || product.stock === 0) return;
 
     setIsAddingToCart(true);
+
+    const itemPrice = product.finalPrice || product.price || 0;
+    const totalValue = itemPrice * quantity;
+
     try {
       await addToCart(product, quantity);
       showNotification("Product added to cart!");
@@ -236,85 +291,233 @@ const ProductDetails = () => {
     } finally {
       setIsAddingToCart(false);
     }
+
+    // ✅ ADD_TO_CART DATALAYER (GA4)
+    pushDataLayer({
+      event: "add_to_cart",
+      ecommerce: {
+        currency: "BDT",
+        value: totalValue,
+        items: [
+          {
+            item_id: product._id || product.id,
+            item_name: product.name,
+            item_brand: product.brand || "",
+            item_category: product.category || "",
+            item_category2: product.subCategory || "",
+            item_category3: product.material || "",
+            item_variant: product.color || product.shade || "",
+            price: itemPrice,
+            currency: "BDT",
+            quantity: quantity,
+            discount: product.discount || 0,
+            index: 1,
+
+            // ✅ EXTRA INFO
+            item_stock: product.stock || 0,
+            item_volume: product.volume || "",
+            item_skin_type: product.skinType || "",
+            item_rating: product.rating || 0,
+            item_image:
+              product.images?.[0] ||
+              product.imageUrls?.[0] ||
+              product.imageUrl ||
+              "",
+          },
+        ],
+
+        // ✅ CART CONTEXT
+        cart_info: {
+          action: "add",
+          total_value: totalValue,
+          items_count: quantity,
+          original_price: product.price || 0,
+          discounted_price: itemPrice,
+          savings_per_item: (product.price || 0) - itemPrice,
+          total_savings: ((product.price || 0) - itemPrice) * quantity,
+        },
+      },
+    });
+
+    // ✅ FACEBOOK PIXEL — AddToCart
     if (typeof window !== "undefined" && window.fbq) {
       window.fbq("track", "AddToCart", {
         content_ids: [product._id],
         content_name: product.name,
         content_type: "product",
-        value: product.finalPrice || product.price,
+        content_category: product.category,
+        value: itemPrice,
         currency: "BDT",
+        quantity: quantity,
       });
     }
   };
 
-  const handleBuyNow = async () => {
-    setIsBuyingNow(true);
-    try {
-      // Get user ID from localStorage or context
-      const userId =
-        localStorage.getItem("userId") || "guest-user-" + Date.now();
-      localStorage.setItem("userId", userId);
+   const handleBuyNow = async () => {
+     setIsBuyingNow(true);
 
-      const productId = product._id || product.id;
-      if (!productId) {
-        throw new Error("Invalid product ID");
-      }
+     const itemPrice = product.finalPrice || product.price || 0;
+     const shippingCost =
+       shippingLocation === "inside"
+         ? product.shipping?.insideDhaka || 0
+         : product.shipping?.outsideDhaka || 0;
+     const subtotalValue = itemPrice * quantity;
+     const totalValue = subtotalValue + shippingCost;
 
-      // Calculate shipping cost based on selection
-      const shippingCost =
-        shippingLocation === "inside"
-          ? product.shipping?.insideDhaka || 0
-          : product.shipping?.outsideDhaka || 0;
+     // ✅ BEGIN_CHECKOUT DATALAYER (GA4)
+     pushDataLayer({
+       event: "begin_checkout",
+       ecommerce: {
+         currency: "BDT",
+         value: totalValue,
+         coupon: "",
+         shipping: shippingCost,
+         tax: 0,
+         items: [
+           {
+             item_id: product._id || product.id,
+             item_name: product.name,
+             item_brand: product.brand || "",
+             item_category: product.category || "",
+             item_category2: product.subCategory || "",
+             item_category3: product.material || "",
+             item_variant: product.color || product.shade || "",
+             price: itemPrice,
+             currency: "BDT",
+             quantity: quantity,
+             discount: product.discount || 0,
+             index: 1,
+             item_stock: product.stock || 0,
+             item_volume: product.volume || "",
+             item_skin_type: product.skinType || "",
+             item_rating: product.rating || 0,
+             item_image:
+               product.images?.[0] ||
+               product.imageUrls?.[0] ||
+               product.imageUrl ||
+               "",
+           },
+         ],
+         checkout_info: {
+           subtotal: subtotalValue,
+           shipping_cost: shippingCost,
+           shipping_location: shippingLocation,
+           shipping_label:
+             shippingLocation === "inside" ? "Inside Dhaka" : "Outside Dhaka",
+           total_savings: ((product.price || 0) - itemPrice) * quantity,
+           items_count: quantity,
+           payment_flow: "buy_now",
+           checkout_step: 1,
+           checkout_option: "product_page_direct",
+         },
+       },
+     });
 
-      // Create an order first instead of directly processing checkout
-      const response = await fetch("/api/manage-my-order", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          items: [
-            {
-              productId: productId,
-              quantity,
-              price: product.finalPrice || product.price,
-            },
-          ],
-          // Add shipping info
-          shipping: {
-            location: shippingLocation,
-            cost: shippingCost,
+     // ✅ FACEBOOK PIXEL — InitiateCheckout
+     if (typeof window !== "undefined" && window.fbq) {
+       window.fbq("track", "InitiateCheckout", {
+         content_ids: [product._id],
+         content_name: product.name,
+         content_type: "product",
+         value: totalValue,
+         currency: "BDT",
+         num_items: quantity,
+       });
+     }
+
+     // ============================================================
+     // ✅ পরিবর্তন: ডাটাবেসে POST না করে localStorage এ সেভ করুন
+     // ============================================================
+     const orderDetails = {
+       items: [
+         {
+           productId: product._id || product.id,
+           name: product.name,
+           price: itemPrice,
+           quantity: quantity,
+           imageUrl:
+             product.images?.[0] ||
+             product.imageUrls?.[0] ||
+             product.imageUrl ||
+             "",
+         },
+       ],
+       totalPrice: totalValue,
+       shippingCost: shippingCost,
+       shippingLocation: shippingLocation,
+       createdAt: new Date().toISOString(),
+     };
+
+     localStorage.setItem("pendingOrder", JSON.stringify(orderDetails));
+
+     // ✅ orderId ছাড়া পেমেন্ট পেজে রিডাইরেক্ট করুন
+     router.push("/payment");
+
+     setIsBuyingNow(false);
+   };
+
+  // ============================================================
+  //  ADD TO WISHLIST — DATALAYER
+  // ============================================================
+  const toggleWishlist = () => {
+    const newWishlistState = !isWishlist;
+    setIsWishlist(newWishlistState);
+    showNotification(
+      newWishlistState ? "Added to wishlist" : "Removed from wishlist",
+    );
+
+    if (!product) return;
+
+    // ✅ ADD_TO_WISHLIST DATALAYER (GA4)
+    pushDataLayer({
+      event: newWishlistState ? "add_to_wishlist" : "remove_from_wishlist",
+      ecommerce: {
+        currency: "BDT",
+        value: product.finalPrice || product.price || 0,
+        items: [
+          {
+            item_id: product._id || product.id,
+            item_name: product.name,
+            item_brand: product.brand || "",
+            item_category: product.category || "",
+            item_category2: product.subCategory || "",
+            item_category3: product.material || "",
+            item_variant: product.color || product.shade || "",
+            price: product.finalPrice || product.price || 0,
+            currency: "BDT",
+            quantity: 1,
+            discount: product.discount || 0,
+            index: 1,
+
+            item_stock: product.stock || 0,
+            item_volume: product.volume || "",
+            item_rating: product.rating || 0,
+            item_image:
+              product.images?.[0] ||
+              product.imageUrls?.[0] ||
+              product.imageUrl ||
+              "",
           },
-          totalAmount:
-            parseFloat(product.finalPrice || product.price) * quantity +
-            shippingCost,
-        }),
+        ],
+
+        wishlist_info: {
+          action: newWishlistState ? "add" : "remove",
+          source: "product_page",
+          product_in_stock: (product.stock || 0) > 0,
+        },
+      },
+    });
+
+    // ✅ FACEBOOK PIXEL — AddToWishlist
+    if (typeof window !== "undefined" && window.fbq && newWishlistState) {
+      window.fbq("track", "AddToWishlist", {
+        content_ids: [product._id],
+        content_name: product.name,
+        content_type: "product",
+        content_category: product.category,
+        value: product.finalPrice || product.price,
+        currency: "BDT",
       });
-
-      if (!response.ok) {
-        let errorMessage = `Failed to create order (${response.status})`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch (e) {
-          // Ignore parsing error
-        }
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-
-      if (data && data.success && data.data && data.data._id) {
-        router.push(`/payment?orderId=${data.data._id}`);
-      } else {
-        throw new Error("Invalid order data received");
-      }
-    } catch (error) {
-      console.error("Error creating order:", error);
-      showNotification(error.message || "Failed to create order");
-    } finally {
-      setIsBuyingNow(false);
     }
   };
 
@@ -326,15 +529,7 @@ const ProductDetails = () => {
     setZoomPosition({ x, y });
   };
 
-  const toggleWishlist = () => {
-    setIsWishlist(!isWishlist);
-    showNotification(
-      isWishlist ? "Removed from wishlist" : "Added to wishlist",
-    );
-  };
-
   const showNotification = (message) => {
-    // Create a simple notification
     const notification = document.createElement("div");
     notification.className =
       "fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg z-50 animate-fade-in";
@@ -432,7 +627,6 @@ const ProductDetails = () => {
 
       showNotification("Thank you for your review!");
 
-      // Refresh product data
       try {
         const productResponse = await fetch(`/api/products/${params.id}`);
         if (productResponse.ok) {
@@ -452,7 +646,6 @@ const ProductDetails = () => {
     }
   };
 
-  // Pagination functions
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
   const nextPage = () =>
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
@@ -491,13 +684,6 @@ const ProductDetails = () => {
     );
   }
 
-  // ============================================================
-  // FIX: Correct logic for handling images
-  // 1. Check 'images' array (from your JSON)
-  // 2. Check 'imageUrls' array (legacy)
-  // 3. Check 'imageUrl' string (legacy)
-  // 4. Fallback
-  // ============================================================
   const getDisplayImages = (prod) => {
     if (prod.images && Array.isArray(prod.images) && prod.images.length > 0) {
       return prod.images;
@@ -520,7 +706,6 @@ const ProductDetails = () => {
   };
 
   const productImages = getDisplayImages(product);
-  // ============================================================
 
   return (
     <div className="bg-gray-50">
@@ -725,7 +910,7 @@ const ProductDetails = () => {
                 </div>
               </div>
 
-              {/* NEW: Shipping Location Selector */}
+              {/* Shipping Location Selector */}
               <div className="flex items-center space-x-4">
                 <span className="font-medium">Delivery Area:</span>
                 <div className="flex items-center space-x-6">
@@ -791,7 +976,6 @@ const ProductDetails = () => {
                 className="flex items-center justify-center space-x-2 px-6 py-3 bg-orange-500 text-white font-medium rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               >
                 <span>Call Us - 01518-997176</span>
-                {/* Copy Icon (Optional but helpful) */}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-5 w-5 ml-2"
@@ -837,7 +1021,7 @@ const ProductDetails = () => {
               </div>
             )}
 
-            {/* UPDATED: Shipping & Returns Section */}
+            {/* Shipping & Returns Section */}
             <div className="border-t pt-6 space-y-4">
               <h3 className="text-lg font-semibold mb-4">Shipping & Returns</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1335,136 +1519,9 @@ const ProductDetails = () => {
             )}
           </div>
         </div>
-
-        {/* {isLoading ? (
-          <div className="flex justify-center items-center py-20">
-            <p className="animate-pulse text-gray-500">Loading...</p>
-          </div>
-        ) : (
-          relatedProducts.length > 0 && (
-            <div className="mt-16">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  More Products from {product.category}
-                </h2>
-                <Link
-                  href={`/products?category=${product.category.toLowerCase()}`}
-                  className="text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  View All
-                </Link>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {relatedProducts.map((relatedProduct, index) => {
-                  const isVisible = index < visibleRelatedCount;
-
-                  // Image Logic
-                  const relatedImage =
-                    relatedProduct.images?.[0] ||
-                    relatedProduct.imageUrls?.[0] ||
-                    relatedProduct.imageUrl ||
-                    `https://picsum.photos/seed/${relatedProduct.id}/400/400.jpg`;
-
-                  return isVisible ? (
-                    <Link
-                      href={`/product/${relatedProduct._id || relatedProduct.id}`}
-                      key={relatedProduct._id || relatedProduct.id}
-                      className="group animate-fade-in-up"
-                    >
-                      <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
-                        <div className="relative">
-                          <div className="w-full aspect-square bg-gray-100 relative overflow-hidden">
-                            <Image
-                              src={relatedImage}
-                              alt={relatedProduct.name}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-300"
-                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                              unoptimized={relatedImage.includes("ibb.co")}
-                            />
-                          </div>
-                          {relatedProduct.discount > 0 && (
-                            <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
-                              -{relatedProduct.discount}%
-                            </div>
-                          )}
-                        </div>
-                        <div className="p-4">
-                          <p className="text-xs text-gray-500 mb-1 truncate">
-                            {relatedProduct.brand}
-                          </p>
-                          <h3 className="text-sm font-medium text-gray-900 mb-1 line-clamp-2 min-h-[2.5rem]">
-                            {relatedProduct.name}
-                          </h3>
-                          <div className="flex items-center mb-2">
-                            {renderStars(
-                              relatedProduct.rating || 0,
-                              false,
-                              null,
-                              "small",
-                            )}
-                            <span className="ml-1 text-xs text-gray-600">
-                              ({relatedProduct.rating || 0})
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              {relatedProduct.discount > 0 ? (
-                                <>
-                                  <span className="text-sm font-bold text-gray-900">
-                                    ৳{relatedProduct?.finalPrice}
-                                  </span>
-                                  <span className="text-xs text-gray-500 line-through ml-1">
-                                    ৳{relatedProduct?.price}
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="text-sm font-bold text-gray-900">
-                                  ৳
-                                  {relatedProduct.price?.toFixed(2) ||
-                                    relatedProduct.price}
-                                </span>
-                              )}
-                            </div>
-                            <button
-                              type="button"
-                              className="p-1.5 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                addToCart(relatedProduct, 1);
-                                showNotification(
-                                  `Added ${relatedProduct.name} to cart`,
-                                );
-                              }}
-                            >
-                              <ShoppingCart className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ) : (
-                    <div
-                      key={`skeleton-${relatedProduct._id || relatedProduct.id}`}
-                      className="bg-white rounded-lg shadow-sm overflow-hidden"
-                    >
-                      <div className="w-full aspect-square bg-gray-100 animate-pulse"></div>
-                      <div className="p-4 space-y-2">
-                        <div className="h-3 bg-gray-100 rounded w-1/2 animate-pulse"></div>
-                        <div className="h-4 bg-gray-100 rounded w-3/4 animate-pulse"></div>
-                        <div className="h-4 bg-gray-100 rounded w-1/4 animate-pulse"></div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )
-        )} */}
       </div>
     </div>
   );
-};
+};;
 
 export default ProductDetails;
