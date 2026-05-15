@@ -365,65 +365,64 @@ const ProductDetails = () => {
      const totalValue = subtotalValue + shippingCost;
 
      // ✅ BEGIN_CHECKOUT DATALAYER (GA4)
-     pushDataLayer({
-       event: "begin_checkout",
-       ecommerce: {
-         currency: "BDT",
-         value: totalValue,
-         coupon: "",
-         shipping: shippingCost,
-         tax: 0,
-         items: [
-           {
-             item_id: product._id || product.id,
-             item_name: product.name,
-             item_brand: product.brand || "",
-             item_category: product.category || "",
-             item_category2: product.subCategory || "",
-             item_category3: product.material || "",
-             item_variant: product.color || product.shade || "",
-             price: itemPrice,
-             currency: "BDT",
-             quantity: quantity,
-             discount: product.discount || 0,
-             index: 1,
-             item_stock: product.stock || 0,
-             item_volume: product.volume || "",
-             item_skin_type: product.skinType || "",
-             item_rating: product.rating || 0,
-             item_image:
-               product.images?.[0] ||
-               product.imageUrls?.[0] ||
-               product.imageUrl ||
-               "",
-           },
-         ],
-         checkout_info: {
-           subtotal: subtotalValue,
-           shipping_cost: shippingCost,
-           shipping_location: shippingLocation,
-           shipping_label:
-             shippingLocation === "inside" ? "Inside Dhaka" : "Outside Dhaka",
-           total_savings: ((product.price || 0) - itemPrice) * quantity,
-           items_count: quantity,
-           payment_flow: "buy_now",
-           checkout_step: 1,
-           checkout_option: "product_page_direct",
-         },
-       },
-     });
+    //  pushDataLayer({
+    //    event: "begin_checkout",
+    //    ecommerce: {
+    //      currency: "BDT",
+    //      value: totalValue,
+    //      coupon: "",
+    //      shipping: shippingCost,
+    //      tax: 0,
+    //      items: [
+    //        {
+    //          item_id: product._id || product.id,
+    //          item_name: product.name,
+    //          item_brand: product.brand || "",
+    //          item_category: product.category || "",
+    //          item_category2: product.subCategory || "",
+    //          item_category3: product.material || "",
+    //          item_variant: product.color || product.shade || "",
+    //          price: itemPrice,
+    //          currency: "BDT",
+    //          quantity: quantity,
+    //          discount: product.discount || 0,
+    //          index: 1,
+    //          item_stock: product.stock || 0,
+    //          item_volume: product.volume || "",
+    //          item_skin_type: product.skinType || "",
+    //          item_rating: product.rating || 0,
+    //          item_image:
+    //            product.images?.[0] ||
+    //            product.imageUrls?.[0] ||
+    //            product.imageUrl ||
+    //            "",
+    //        },
+    //      ],
+    //      checkout_info: {
+    //        subtotal: subtotalValue,
+    //        shipping_cost: shippingCost,
+    //        shipping_location: shippingLocation,
+    //        shipping_label:
+    //          shippingLocation === "inside" ? "Inside Dhaka" : "Outside Dhaka",
+    //        total_savings: ((product.price || 0) - itemPrice) * quantity,
+    //        items_count: quantity,
+    //        payment_flow: "buy_now",
+    //        checkout_step: 1,
+    //        checkout_option: "product_page_direct",
+    //      },
+    //    },
+    //  });
 
-     // ✅ FACEBOOK PIXEL — InitiateCheckout
-     if (typeof window !== "undefined" && window.fbq) {
-       window.fbq("track", "InitiateCheckout", {
-         content_ids: [product._id],
-         content_name: product.name,
-         content_type: "product",
-         value: totalValue,
-         currency: "BDT",
-         num_items: quantity,
-       });
-     }
+    //  if (typeof window !== "undefined" && window.fbq) {
+    //    window.fbq("track", "InitiateCheckout", {
+    //      content_ids: [product._id],
+    //      content_name: product.name,
+    //      content_type: "product",
+    //      value: totalValue,
+    //      currency: "BDT",
+    //      num_items: quantity,
+    //    });
+    //  }
 
      // ============================================================
      // ✅ পরিবর্তন: ডাটাবেসে POST না করে localStorage এ সেভ করুন

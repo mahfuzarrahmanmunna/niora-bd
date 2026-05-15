@@ -4,8 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ShoppingCart, Loader2 } from "lucide-react";
-import { Suspense } from "react"; // 1. Import Suspense
-import { fbq } from "@/lib/fpixel";
+import { Suspense } from "react";
+
+// --- Manual Facebook Pixel Import REMOVED ---
+// import { fbq } from "@/lib/fpixel";
 
 // --- 2. Extracted Loading Component (Used for Suspense Fallback) ---
 const ProductsSkeleton = () => {
@@ -48,14 +50,26 @@ const AllProductsContent = () => {
 
   const categoriesPerLoad = 2;
 
+  // --- UPDATED: ViewContent event pushed to Data Layer ---
   useEffect(() => {
-    fbq("track", "ViewContent", {
-      content_name: products.name,
-      content_category: products.category,
-      value: products.price,
-      currency: "BDT",
-    });
+    if (products.length > 0) {
+      if (typeof window !== "undefined") {
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+          event: "view_item_list", // GTM Trigger Name
+          item_list_name: "All Products",
+          items: products.map((product) => ({
+            item_id: product.id,
+            item_name: product.name,
+            category: product.category,
+            price: product.finalPrice || product.price,
+            currency: "BDT",
+          })),
+        });
+      }
+    }
   }, [products]);
+
   console.log(products);
 
   useEffect(() => {
@@ -184,21 +198,33 @@ const AllProductsContent = () => {
     [loadingMore, hasMore, loadMoreCategories],
   );
 
+  // --- UPDATED: AddToCart event pushed to Data Layer ---
   const handleAddToCart = (e, product) => {
     e.preventDefault();
     e.stopPropagation();
     console.log(`Added ${product.name} to cart`);
-    fbq("track", "AddToCart", {
-      content_name: product.name,
-      content_ids: [product.id],
-      content_type: "product",
-      value: product.price,
-      currency: "BDT",
-    });
+
+    if (typeof window !== "undefined") {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: "add_to_cart", // GTM Trigger Name
+        ecommerce: {
+          currency: "BDT",
+          value: product.finalPrice || product.price,
+          items: [
+            {
+              item_id: product.id,
+              item_name: product.name,
+              price: product.finalPrice || product.price,
+              quantity: 1,
+            },
+          ],
+        },
+      });
+    }
   };
 
   if (isLoading) {
-    // We reuse the Skeleton here for consistency
     return <ProductsSkeleton />;
   }
 

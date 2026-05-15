@@ -93,14 +93,14 @@ const ProductDetails = () => {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  useEffect(() => {
-    fbq("track", "ViewContent", {
-      content_name: product.name,
-      content_category: product.category,
-      value: product.price,
-      currency: "BDT",
-    });
-  }, [product]);
+  // useEffect(() => {
+  //   fbq("track", "ViewContent", {
+  //     content_name: product.name,
+  //     content_category: product.category,
+  //     value: product.price,
+  //     currency: "BDT",
+  //   });
+  // }, [product]);
 
   useEffect(() => {
     const fetchProductData = async () => {

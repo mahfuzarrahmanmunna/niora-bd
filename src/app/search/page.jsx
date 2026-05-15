@@ -184,16 +184,16 @@ function SearchResults() {
   };
 
   // Handle add to cart
-  const handleAddToCart = (e, product) => {
-    e.preventDefault();
-    fbq("track", "AddToCart", {
-      content_name: product.name,
-      content_ids: [product.id],
-      content_type: "product",
-      value: product.price,
-      currency: "BDT",
-    });
-  };
+  // const handleAddToCart = (e, product) => {
+  //   e.preventDefault();
+  //   fbq("track", "AddToCart", {
+  //     content_name: product.name,
+  //     content_ids: [product.id],
+  //     content_type: "product",
+  //     value: product.price,
+  //     currency: "BDT",
+  //   });
+  // };
 
   if (isLoading) {
     return (

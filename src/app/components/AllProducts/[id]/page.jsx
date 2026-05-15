@@ -20,22 +20,22 @@ const ProductDetails = ({ product }) => {
     `https://picsum.photos/seed/${product.id}-alt3/800/800.jpg`,
   ];
 
-  const handleAddToCart = () => {
-    setIsAddingToCart(true);
-    // Simulate API call
-    setTimeout(() => {
-      console.log(`Added ${quantity} x ${product.name} to cart.`);
-      setIsAddingToCart(false);
-      // You could show a success notification here
-    }, 1500);
-    fbq("track", "AddToCart", {
-      content_name: product.name,
-      content_ids: [product.id],
-      content_type: "product",
-      value: product.price,
-      currency: "BDT",
-    });
-  };
+  // const handleAddToCart = () => {
+  //   setIsAddingToCart(true);
+  //   // Simulate API call
+  //   setTimeout(() => {
+  //     console.log(`Added ${quantity} x ${product.name} to cart.`);
+  //     setIsAddingToCart(false);
+  //     // You could show a success notification here
+  //   }, 1500);
+  //   fbq("track", "AddToCart", {
+  //     content_name: product.name,
+  //     content_ids: [product.id],
+  //     content_type: "product",
+  //     value: product.price,
+  //     currency: "BDT",
+  //   });
+  // };
 
   const renderStars = (rating) => {
     return Array.from({ length: 5 }, (_, i) => (

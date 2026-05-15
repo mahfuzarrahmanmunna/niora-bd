@@ -170,19 +170,19 @@ const CategoryPage = () => {
   };
 
   // Handle add to cart
-  const handleAddToCart = (e, product) => {
-    e.stopPropagation();
-    // Add to cart functionality here
-    console.log(`Added ${product.name} to cart`);
-    // You could show a notification here
-    fbq("track", "AddToCart", {
-      content_name: product.name,
-      content_ids: [product.id],
-      content_type: "product",
-      value: product.price,
-      currency: "BDT",
-    });
-  };
+  // const handleAddToCart = (e, product) => {
+  //   e.stopPropagation();
+  //   // Add to cart functionality here
+  //   console.log(`Added ${product.name} to cart`);
+  //   // You could show a notification here
+  //   fbq("track", "AddToCart", {
+  //     content_name: product.name,
+  //     content_ids: [product.id],
+  //     content_type: "product",
+  //     value: product.price,
+  //     currency: "BDT",
+  //   });
+  // };
 
   if (isLoading || !categorySlug) {
     return (

@@ -37,18 +37,18 @@ const ProductCard = ({ product, onAddToCart, index }) => {
 
   const imageSrc = getDisplayImage();
 
-  const handleAddToCartClick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onAddToCart(product);
-    fbq("track", "AddToCart", {
-      content_name: product.name,
-      content_ids: [product.id],
-      content_type: "product",
-      value: product.price,
-      currency: "BDT",
-    });
-  };
+  // const handleAddToCartClick = (e) => {
+  //   e.preventDefault();
+  //   e.stopPropagation();
+  //   onAddToCart(product);
+  //   fbq("track", "AddToCart", {
+  //     content_name: product.name,
+  //     content_ids: [product.id],
+  //     content_type: "product",
+  //     value: product.price,
+  //     currency: "BDT",
+  //   });
+  // };
 
   const renderRating = (rating) => {
     return (
@@ -158,15 +158,15 @@ const AllProductsPage = () => {
   const [filterCategory, setFilterCategory] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    fbq("track", "ViewContent", {
-      content_name: products.name,
-      content_category: products.category,
-      value: products.price,
-      currency: "BDT",
-    });
-  }, [products]);
-  console.log(products);
+  // useEffect(() => {
+  //   fbq("track", "ViewContent", {
+  //     content_name: products.name,
+  //     content_category: products.category,
+  //     value: products.price,
+  //     currency: "BDT",
+  //   });
+  // }, [products]);
+  // console.log(products);
 
   useEffect(() => {
     const fetchProducts = async () => {
