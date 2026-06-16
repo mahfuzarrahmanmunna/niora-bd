@@ -271,9 +271,6 @@ const ProductDetails = () => {
     );
   };
 
-  // ============================================================
-  // 🔥 ADD TO CART — DATALAYER + FB PIXEL
-  // ============================================================
   const handleAddToCart = async () => {
     if (!product || product.stock === 0) return;
 
@@ -292,65 +289,7 @@ const ProductDetails = () => {
       setIsAddingToCart(false);
     }
 
-    // ✅ ADD_TO_CART DATALAYER (GA4)
-    pushDataLayer({
-      event: "add_to_cart",
-      ecommerce: {
-        currency: "BDT",
-        value: totalValue,
-        items: [
-          {
-            item_id: product._id || product.id,
-            item_name: product.name,
-            item_brand: product.brand || "",
-            item_category: product.category || "",
-            item_category2: product.subCategory || "",
-            item_category3: product.material || "",
-            item_variant: product.color || product.shade || "",
-            price: itemPrice,
-            currency: "BDT",
-            quantity: quantity,
-            discount: product.discount || 0,
-            index: 1,
 
-            // ✅ EXTRA INFO
-            item_stock: product.stock || 0,
-            item_volume: product.volume || "",
-            item_skin_type: product.skinType || "",
-            item_rating: product.rating || 0,
-            item_image:
-              product.images?.[0] ||
-              product.imageUrls?.[0] ||
-              product.imageUrl ||
-              "",
-          },
-        ],
-
-        // ✅ CART CONTEXT
-        cart_info: {
-          action: "add",
-          total_value: totalValue,
-          items_count: quantity,
-          original_price: product.price || 0,
-          discounted_price: itemPrice,
-          savings_per_item: (product.price || 0) - itemPrice,
-          total_savings: ((product.price || 0) - itemPrice) * quantity,
-        },
-      },
-    });
-
-    // ✅ FACEBOOK PIXEL — AddToCart
-    if (typeof window !== "undefined" && window.fbq) {
-      window.fbq("track", "AddToCart", {
-        content_ids: [product._id],
-        content_name: product.name,
-        content_type: "product",
-        content_category: product.category,
-        value: itemPrice,
-        currency: "BDT",
-        quantity: quantity,
-      });
-    }
   };
 
    const handleBuyNow = async () => {
@@ -455,9 +394,6 @@ const ProductDetails = () => {
      setIsBuyingNow(false);
    };
 
-  // ============================================================
-  //  ADD TO WISHLIST — DATALAYER
-  // ============================================================
   const toggleWishlist = () => {
     const newWishlistState = !isWishlist;
     setIsWishlist(newWishlistState);
