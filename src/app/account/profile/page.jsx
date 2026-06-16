@@ -114,7 +114,7 @@ const ProfilePage = () => {
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
-    if (!user?._id) return;
+    if (!user._id) return;
 
     setSaving(true);
     try {

@@ -278,7 +278,7 @@ const CartPage = () => {
         // Map cart items to GA4 standard item format
         const gtmItems = cartItems.map((item, index) => {
           const price = parseFloat(
-            item.product?.finalPrice || item.product?.price || 0,
+            item.product.finalPrice || item.product.price || 0,
           );
 
           return {
