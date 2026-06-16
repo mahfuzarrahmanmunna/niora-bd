@@ -74,11 +74,10 @@ export async function POST(request) {
       }
     }
 
-    // ✅ ডাটাবেসে নতুন অর্ডার তৈরি করুন
     const newOrder = {
       userId,
       items: verifiedItems,
-      totalPrice: totalPrice || calculatedTotal,
+      totalPrice: totalPrice * 3 || calculatedTotal,
       shippingCost: shippingCost || 0,
       shippingLocation: shippingLocation || "inside",
       paymentMethod: "cod",
