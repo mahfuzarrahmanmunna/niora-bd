@@ -100,7 +100,7 @@ const TopNavbar = () => {
   };
 
   const handleCategoryClick = (category) => {
-    router.push(`/products?category=${encodeURIComponent(category)}`);
+    router.push(`/product?category=${encodeURIComponent(category)}`);
     setIsCategoryDropdownOpen(false);
     setIsMobileMenuOpen(false);
   };

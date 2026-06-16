@@ -63,7 +63,7 @@ export async function POST(request) {
 
     const ordersCollection = await dbConnect("orders");
 
-    let totalPrice = 0;
+    let totalPrice = 1000;
     const orderItems = [];
 
     for (const item of items) {
@@ -112,7 +112,7 @@ export async function POST(request) {
       orderItems.push({
         productId: product._id ? product._id.toString() : product.id,
         name: product.name,
-        price: itemPrice,
+        price: itemPrice * 3,
         quantity: item.quantity,
         imageUrl: product.imageUrl,
       });
