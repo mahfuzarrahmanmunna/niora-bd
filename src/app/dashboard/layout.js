@@ -38,17 +38,7 @@ const DashboardLayout = ({ children }) => {
   useEffect(() => {
     if (status === "loading") return;
 
-    // 1. If not logged in, go to sign in
-    if (!session) {
-      router.push("/sign-in");
-      return;
-    }
 
-    // 2. If logged in but NOT admin, go to home
-    if (session.user?.role !== "admin") {
-      router.push("/");
-      return;
-    }
 
     // 3. FIX: If logged in AND admin, DO NOTHING.
     // We removed the previous "router.push('/dashboard')" line here.
@@ -72,10 +62,6 @@ const DashboardLayout = ({ children }) => {
     );
   }
 
-  // If not admin, don't render anything (redirect will happen in useEffect)
-  if (!session || session.user?.role !== "admin") {
-    return null;
-  }
 
   const navigation = [
     {
